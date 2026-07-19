@@ -35,3 +35,23 @@ cd ../seoulection-admin
 
 기본 MongoDB 주소는 `mongodb://localhost:27017/seoulection`이며, 다른 주소는
 `MONGODB_URI` 환경변수로 설정할 수 있습니다.
+
+## Docker 실행
+
+어드민 이미지만 빌드할 때는 다음 명령을 사용합니다.
+
+```bash
+docker build -t seoulection-admin:local .
+```
+
+로컬 전체 스택에서는 MongoDB와 어드민 서버가 같은 Compose 기본 네트워크를
+사용합니다. `seoulection-server`에서 실행하면 Compose가 어드민 이미지도 빌드합니다.
+
+```bash
+cd ../seoulection-server
+export JWT_SECRET=$(openssl rand -base64 48)
+docker compose -f docker-compose-local.yml up -d --build mongo admin-server
+```
+
+컨테이너 내부에서는 `localhost`가 아니라 Mongo 서비스명인 `mongo`로 접속하며,
+관리 화면은 <http://localhost:8081/admin>에서 확인할 수 있습니다.
