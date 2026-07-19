@@ -26,7 +26,7 @@ public class Youtuber {
     }
 
     public static Youtuber create(String channelName, String channelId, String url) {
-        return new Youtuber(null, channelName, channelId, url, null);
+        return new Youtuber(url, channelName, channelId, url, null);
     }
 
     public static Youtuber restore(

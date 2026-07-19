@@ -47,11 +47,12 @@ class YoutuberControllerTest {
         String url = "https://www.youtube.com/@beauty";
 
         mockMvc.perform(post("/admin/youtubers")
+                        .param("channelName", "뷰티 채널")
                         .param("url", url))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/youtubers"))
                 .andExpect(flash().attribute("successMessage", "YouTube 채널을 등록했습니다."));
 
-        then(service).should().register(url);
+        then(service).should().register("뷰티 채널", url);
     }
 }

@@ -2,7 +2,7 @@ package com.seoulection.admin.youtube.presentation.controller;
 
 import com.seoulection.admin.youtube.application.service.YoutuberService;
 import com.seoulection.admin.youtube.domain.exception.YoutubeAdminException;
-import com.seoulection.admin.youtube.presentation.dto.YoutubeUrlRegisterRequest;
+import com.seoulection.admin.youtube.presentation.dto.YoutuberRegisterRequest;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -24,7 +24,7 @@ public class YoutuberController {
     @GetMapping("/admin/youtubers")
     public String page(Model model) {
         if (!model.containsAttribute("request")) {
-            model.addAttribute("request", new YoutubeUrlRegisterRequest());
+            model.addAttribute("request", new YoutuberRegisterRequest());
         }
         model.addAttribute("youtubers", service.getYoutubers());
         return "youtubers";
@@ -32,7 +32,7 @@ public class YoutuberController {
 
     @PostMapping("/admin/youtubers")
     public String register(
-            @Valid @ModelAttribute("request") YoutubeUrlRegisterRequest request,
+            @Valid @ModelAttribute("request") YoutuberRegisterRequest request,
             BindingResult bindingResult,
             Model model,
             RedirectAttributes redirectAttributes
@@ -43,7 +43,7 @@ public class YoutuberController {
         }
 
         try {
-            service.register(request.getUrl());
+            service.register(request.getChannelName(), request.getUrl());
             redirectAttributes.addFlashAttribute("successMessage", "YouTube 채널을 등록했습니다.");
             return "redirect:/admin/youtubers";
         } catch (YoutubeAdminException e) {

@@ -1,6 +1,5 @@
 package com.seoulection.admin.youtube.application.service;
 
-import com.seoulection.admin.youtube.application.dto.ParsedYoutubeChannelUrl;
 import com.seoulection.admin.youtube.application.dto.YoutuberResult;
 import com.seoulection.admin.youtube.domain.exception.YoutubeAdminException;
 import com.seoulection.admin.youtube.domain.entity.Youtuber;
@@ -13,28 +12,25 @@ import java.util.List;
 @Service
 public class YoutuberService {
 
-    private final YoutubeChannelUrlParser urlParser;
     private final YoutuberRepository repository;
 
-    public YoutuberService(YoutubeChannelUrlParser urlParser, YoutuberRepository repository) {
-        this.urlParser = urlParser;
+    public YoutuberService(YoutuberRepository repository) {
         this.repository = repository;
     }
 
-    public YoutuberResult register(String rawUrl) {
-        ParsedYoutubeChannelUrl parsed = urlParser.parse(rawUrl);
-        if (repository.existsByUrl(parsed.url())) {
-            throw duplicate(parsed.url(), null);
+    public YoutuberResult register(String channelName, String url) {
+        if (repository.existsByUrl(url)) {
+            throw duplicate(url, null);
         }
 
         try {
             return YoutuberResult.from(repository.insert(Youtuber.create(
-                    parsed.channelName(),
-                    parsed.channelId(),
-                    parsed.url()
+                    channelName,
+                    null,
+                    url
             )));
         } catch (DuplicateKeyException e) {
-            throw duplicate(parsed.url(), e);
+            throw duplicate(url, e);
         }
     }
 

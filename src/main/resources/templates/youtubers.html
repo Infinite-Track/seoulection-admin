@@ -44,6 +44,11 @@
 
     <section class="card">
         <form th:action="@{/admin/youtubers}" th:object="${request}" method="post">
+            <label for="channelName">채널명</label>
+            <div class="form-row">
+                <input id="channelName" th:field="*{channelName}" placeholder="채널명" autocomplete="off">
+            </div>
+            <p class="error" th:if="${#fields.hasErrors('channelName')}" th:errors="*{channelName}"></p>
             <label for="url">YouTube 채널 링크</label>
             <div class="form-row">
                 <input id="url" th:field="*{url}" placeholder="https://www.youtube.com/@channel" autocomplete="off">

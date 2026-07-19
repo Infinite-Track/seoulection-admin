@@ -1,8 +1,6 @@
 package com.seoulection.admin.youtube.application;
 
-import com.seoulection.admin.youtube.application.dto.ParsedYoutubeChannelUrl;
 import com.seoulection.admin.youtube.application.dto.YoutuberResult;
-import com.seoulection.admin.youtube.application.service.YoutubeChannelUrlParser;
 import com.seoulection.admin.youtube.application.service.YoutuberService;
 import com.seoulection.admin.youtube.domain.exception.YoutubeAdminException;
 import com.seoulection.admin.youtube.domain.entity.Youtuber;
@@ -23,9 +21,6 @@ import static org.mockito.BDDMockito.then;
 class YoutuberServiceTest {
 
     @Mock
-    YoutubeChannelUrlParser parser;
-
-    @Mock
     YoutuberRepository repository;
 
     @InjectMocks
@@ -34,19 +29,17 @@ class YoutuberServiceTest {
     @Test
     @DisplayName("채널 링크를 유튜버 컬렉션에 등록한다")
     void register() {
-        ParsedYoutubeChannelUrl parsed = new ParsedYoutubeChannelUrl(
-                "@beauty",
-                null,
-                "https://www.youtube.com/@beauty"
-        );
-        given(parser.parse(parsed.url())).willReturn(parsed);
-        given(repository.existsByUrl(parsed.url())).willReturn(false);
+        String url = "https://www.youtube.com/@beauty/videos?view=0";
+        given(repository.existsByUrl(url)).willReturn(false);
         given(repository.insert(org.mockito.ArgumentMatchers.any(Youtuber.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        YoutuberResult result = service.register(parsed.url());
+        YoutuberResult result = service.register("뷰티 채널", url);
 
-        assertThat(result.channelName()).isEqualTo("@beauty");
+        assertThat(result.id()).isEqualTo(url);
+        assertThat(result.channelName()).isEqualTo("뷰티 채널");
+        assertThat(result.url()).isEqualTo(url);
+        assertThat(result.channelId()).isNull();
         assertThat(result.lastCheckedAt()).isNull();
         then(repository).should().insert(org.mockito.ArgumentMatchers.any(Youtuber.class));
     }
@@ -54,15 +47,10 @@ class YoutuberServiceTest {
     @Test
     @DisplayName("같은 정규화 채널 URL은 중복 등록하지 않는다")
     void rejectDuplicate() {
-        ParsedYoutubeChannelUrl parsed = new ParsedYoutubeChannelUrl(
-                "@beauty",
-                null,
-                "https://www.youtube.com/@beauty"
-        );
-        given(parser.parse(parsed.url())).willReturn(parsed);
-        given(repository.existsByUrl(parsed.url())).willReturn(true);
+        String url = "https://www.youtube.com/@beauty";
+        given(repository.existsByUrl(url)).willReturn(true);
 
-        assertThatThrownBy(() -> service.register(parsed.url()))
+        assertThatThrownBy(() -> service.register("뷰티 채널", url))
                 .isInstanceOf(YoutubeAdminException.class)
                 .extracting(e -> ((YoutubeAdminException) e).reason())
                 .isEqualTo(YoutubeAdminException.Reason.DUPLICATE_CHANNEL);
