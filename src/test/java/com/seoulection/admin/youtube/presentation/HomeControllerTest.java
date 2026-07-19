@@ -19,12 +19,13 @@ class HomeControllerTest {
     MockMvc mockMvc;
 
     @Test
-    @DisplayName("어드민 홈에서 채널과 영상 관리 메뉴를 제공한다")
+    @DisplayName("어드민 홈에서 채널, 영상, 제품 관리 메뉴를 제공한다")
     void home() throws Exception {
         mockMvc.perform(get("/admin"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("home"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("유튜버 채널 관리")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("YouTube 영상 관리")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("YouTube 영상 관리")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("제품 관리")));
     }
 }
