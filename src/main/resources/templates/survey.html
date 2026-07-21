@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>설문 관리 | Seoulection Admin</title>
+    <style>
+        :root { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #f6f7f9; color: #202124; }
+        main { width: min(1080px, calc(100% - 40px)); margin: 42px auto; }
+        nav { display: flex; gap: 8px; margin-bottom: 30px; }
+        nav a { padding: 10px 14px; border-radius: 8px; color: #525960; text-decoration: none; }
+        nav a.active { background: #1f6feb; color: white; }
+        h1 { margin-bottom: 8px; }
+        h2 { margin: 0 0 6px; font-size: 20px; }
+        .description { margin: 0 0 24px; color: #687078; }
+        .card { padding: 24px; margin-bottom: 24px; background: white; border: 1px solid #e7e9ec; border-radius: 14px; }
+        .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+        label { display: block; margin-bottom: 8px; font-weight: 700; }
+        .field-label { display: block; margin-bottom: 8px; font-weight: 700; }
+        .toggle-group { display: flex; flex-wrap: wrap; gap: 9px; }
+        .toggle-option { margin: 0; cursor: pointer; }
+        .toggle-option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+        .toggle-option span { display: inline-block; padding: 10px 15px; border: 1px solid #cdd2d8; border-radius: 999px; background: white; color: #525960; font-size: 14px; }
+        .toggle-option input:checked + span { border-color: #1f6feb; background: #1f6feb; color: white; }
+        .toggle-option input:focus-visible + span { outline: 3px solid rgba(31, 111, 235, .25); outline-offset: 2px; }
+        input[type=text], input[type=number] { width: 100%; height: 44px; padding: 0 14px; border: 1px solid #cdd2d8; border-radius: 9px; font-size: 15px; }
+        .question-field { grid-column: 1 / -1; }
+        button { height: 44px; margin-top: 18px; padding: 0 20px; border: 0; border-radius: 9px; background: #1f6feb; color: white; font-weight: 700; cursor: pointer; }
+        button.subtle { height: 34px; margin: 0; padding: 0 12px; background: #eef1f4; color: #3c4348; font-size: 13px; }
+        button.danger { height: 34px; margin: 0; padding: 0 12px; background: #fdecec; color: #c62828; font-size: 13px; }
+        .error { margin: 7px 0 0; color: #c62828; font-size: 14px; }
+        .success { padding: 12px 14px; margin-bottom: 18px; border-radius: 9px; background: #e9f7ef; color: #18733f; }
+        .notice { padding: 12px 14px; margin-bottom: 18px; border-radius: 9px; background: #fff8e1; color: #7a5d00; font-size: 14px; line-height: 1.6; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 11px 10px; border-bottom: 1px solid #eceef0; text-align: left; vertical-align: middle; }
+        th { color: #687078; font-size: 13px; }
+        td { font-size: 14px; }
+        tr.inactive td { opacity: .5; }
+        td.actions { display: flex; gap: 6px; align-items: center; }
+        td.actions form { display: flex; gap: 6px; align-items: center; }
+        td input[type=text] { height: 36px; min-width: 260px; }
+        td input[type=number] { width: 78px; height: 36px; }
+        code { padding: 3px 7px; border-radius: 6px; background: #f0f2f5; font-size: 13px; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #eaf2ff; color: #1f6feb; font-size: 12px; font-weight: 700; }
+        .title-form { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+        .title-form input { flex: 1; height: 38px; }
+        .empty { padding: 30px; color: #8a9198; text-align: center; }
+        @media (max-width: 800px) { .form-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<main>
+    <nav>
+        <a th:href="@{/admin}">홈</a>
+        <a th:href="@{/admin/youtubers}">유튜버 채널</a>
+        <a th:href="@{/admin/videos}">영상</a>
+        <a th:href="@{/admin/products}">제품</a>
+        <a class="active" th:href="@{/admin/survey}">설문</a>
+    </nav>
+    <h1>설문 관리</h1>
+    <p class="description">사용자 설문의 질문 문구와 선택지를 관리합니다. 저장 즉시 사용자 화면에 반영됩니다.</p>
+    <div class="success" th:if="${successMessage}" th:text="${successMessage}"></div>
+
+    <p class="notice">
+        <strong>코드(code)는 만든 뒤 바꿀 수 없습니다.</strong>
+        이미 제출된 사용자 응답이 이 문자열을 그대로 참조하고 있어, 코드를 바꾸면 과거 응답이 가리키는 대상이 사라집니다.
+        같은 이유로 <strong>삭제는 '숨김'으로 동작</strong>합니다 — 신규 설문에서만 사라지고 기존 응답은 보존됩니다.
+    </p>
+
+    <section class="card">
+        <h2>선택지 추가</h2>
+        <form th:action="@{/admin/survey/options}" th:object="${request}" method="post">
+            <div class="form-grid">
+                <div class="question-field">
+                    <span class="field-label">문항</span>
+                    <div class="toggle-group">
+                        <label class="toggle-option"><input type="radio" th:field="*{questionKey}" value="AVOIDANCE"><span>회피 성분/상태</span></label>
+                        <label class="toggle-option"><input type="radio" th:field="*{questionKey}" value="CONCERN"><span>피부 고민</span></label>
+                    </div>
+                    <p class="error" th:if="${#fields.hasErrors('questionKey')}" th:errors="*{questionKey}"></p>
+                </div>
+                <div>
+                    <label for="code">코드</label>
+                    <input type="text" id="code" th:field="*{code}" placeholder="FRAGRANCE_ALLERGY" autocomplete="off">
+                    <p class="error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></p>
+                </div>
+                <div>
+                    <label for="label">노출 문구</label>
+                    <input type="text" id="label" th:field="*{label}" placeholder="사용자에게 보일 문구" autocomplete="off">
+                    <p class="error" th:if="${#fields.hasErrors('label')}" th:errors="*{label}"></p>
+                </div>
+                <div>
+                    <label for="sortOrder">노출 순서</label>
+                    <input type="number" id="sortOrder" th:field="*{sortOrder}" min="0" placeholder="0">
+                    <p class="error" th:if="${#fields.hasErrors('sortOrder')}" th:errors="*{sortOrder}"></p>
+                </div>
+                <div>
+                    <span class="field-label">단독 선택</span>
+                    <div class="toggle-group">
+                        <label class="toggle-option">
+                            <input type="checkbox" th:field="*{exclusive}">
+                            <span>다른 항목과 함께 못 고름</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <button type="submit">선택지 추가</button>
+        </form>
+    </section>
+
+    <section class="card" th:each="question : ${questions}">
+        <form class="title-form" th:action="@{'/admin/survey/questions/' + ${question.key}}" method="post">
+            <span class="badge" th:text="${question.key}"></span>
+            <input type="text" name="title" th:value="${question.title}" required>
+            <button class="subtle" type="submit">문구 저장</button>
+        </form>
+
+        <table th:if="${!question.options.isEmpty()}">
+            <thead>
+            <tr><th>코드</th><th>노출 문구</th><th>순서</th><th>단독</th><th>상태</th><th></th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="option : ${question.options}" th:classappend="${option.active} ? '' : 'inactive'">
+                <td><code th:text="${option.code}"></code></td>
+                <td colspan="3">
+                    <form th:action="@{'/admin/survey/options/' + ${option.id}}" method="post"
+                          style="display: flex; gap: 6px; align-items: center;">
+                        <input type="text" name="label" th:value="${option.label}" required>
+                        <input type="number" name="sortOrder" th:value="${option.sortOrder}" min="0" required>
+                        <label class="toggle-option">
+                            <input type="checkbox" name="exclusive" value="true" th:checked="${option.exclusive}">
+                            <span>단독</span>
+                        </label>
+                        <button class="subtle" type="submit">저장</button>
+                    </form>
+                </td>
+                <td>
+                    <span class="badge" th:if="${option.active}">노출</span>
+                    <span class="badge" th:unless="${option.active}" style="background:#f0f2f5;color:#8a9198;">숨김</span>
+                </td>
+                <td class="actions">
+                    <form th:action="@{'/admin/survey/options/' + ${option.id} + '/active'}" method="post">
+                        <input type="hidden" name="active" th:value="${!option.active}">
+                        <button th:classappend="${option.active} ? 'danger' : 'subtle'"
+                                th:text="${option.active} ? '숨기기' : '되살리기'" type="submit"></button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${question.options.isEmpty()}">등록된 선택지가 없습니다.</p>
+    </section>
+</main>
+</body>
+</html>
