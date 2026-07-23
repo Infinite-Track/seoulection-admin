@@ -3,6 +3,18 @@ spring:
     name: seoulection-admin
   mongodb:
     uri: ${MONGODB_URI:mongodb://localhost:27017/seoulection}
+  # 설문 문항·선택지 마스터(survey_question / survey_option)만 Postgres에 있다.
+  # 나머지 관리 대상(youtubers·videos·products)은 그대로 Mongo다 — 데이터소스가 둘인 이유.
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/seoulection}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    hibernate:
+      # ⚠️ none이어야 한다. 이 테이블의 스키마 주인은 api-server다(그쪽이 ddl-auto=update).
+      #    여기서 update를 켜면 두 앱이 같은 테이블 DDL을 서로 밀어내며 경합한다.
+      ddl-auto: none
+    open-in-view: false
   thymeleaf:
     cache: false
 
