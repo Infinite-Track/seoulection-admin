@@ -1,0 +1,112 @@
+name: CI
+
+# main이 항상 초록불이라는 보장 + 배포용 이미지 생성. 배포 실행은 여기서 하지 않는다.
+#
+# api-server(seoulection-server)의 같은 이름 워크플로와 짝이다. 다른 점:
+#   - 이 저장소는 단일 Gradle 프로젝트라 경로 필터가 없다(모노레포가 아니다).
+#     그래서 "필수 체크로 지정했는데 job이 스킵돼 PR이 영원히 대기"하는 함정도 없다.
+#   - gradlew가 루트에 있어 working-directory가 필요 없다.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 같은 브랜치에 연달아 push하면 앞선 실행을 취소한다.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 테스트
+    runs-on: ubuntu-latest
+    # Testcontainers가 컨테이너를 못 받고 매달리면 러너가 6시간까지 돈다. 상한을 둔다.
+    timeout-minutes: 20
+
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v7
+
+      - name: JDK 17 설치
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: temurin
+
+      # ~/.gradle 캐시. 첫 실행은 의존성을 전부 받고, 이후 실행은 복원해서 쓴다.
+      # ⚠️ Actions 캐시는 브랜치 스코프다 — main에서 한 번 돌기 전까지 PR은 캐시를 못 받는다.
+      - name: Gradle 설정 및 캐시
+        uses: gradle/actions/setup-gradle@v6
+
+      # Testcontainers(mongo·postgres)는 ubuntu-latest에 내장된 Docker를 쓴다.
+      - name: 테스트
+        run: ./gradlew test --no-daemon
+
+      - name: 실패 시 테스트 리포트 업로드
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report
+          path: build/reports/tests/test
+          retention-days: 7
+
+  # 이미지를 만들어 GHCR(ghcr.io)에 올린다. EC2는 빌드하지 않고 여기서 pull만 한다.
+  # 이 저장소는 api-server 저장소 밖에 있어서, EC2에서는 애초에 빌드가 불가능하다
+  # (compose의 context: ../seoulection-admin 은 EC2에 존재하지 않는 경로다).
+  #
+  # PR에서는 빌드까지만 하고 push는 하지 않는다.
+  #   main 머지 후에야 처음 도는 job이면, 깨졌을 때 main이 빨간불이 된다.
+  image:
+    name: 이미지 빌드 (main이면 GHCR push)
+    needs: test          # 테스트가 깨졌으면 이미지를 만들 이유가 없다
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write    # GHCR에 쓰려면 필요. test job에는 주지 않는다(최소 권한).
+
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v7
+
+      - name: Buildx 설정
+        uses: docker/setup-buildx-action@v4
+
+      # push하지 않는 PR에서는 로그인도 불필요하다.
+      - name: GHCR 로그인
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          # 저장소가 자동으로 발급하는 토큰. 별도 시크릿 등록이 필요 없다.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 🔴 GHCR은 이미지 이름에 대문자를 허용하지 않는데 소유자명이 Infinite-Track이다.
+      #    ghcr.io/${{ github.repository_owner }}/... 를 그대로 쓰면 push가 실패한다.
+      #    이 액션이 소문자 변환과 태그 생성을 대신 해준다.
+      - name: 이미지 이름·태그 계산
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/seoulection-admin
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 빌드 (main이면 push)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # ⚠️ EC2가 x86_64다. 맥(arm64)에서 만든 이미지는 거기서 exec format error로 안 뜬다.
+          platforms: linux/amd64
+          # 레이어 캐시를 Actions 캐시에 export/import한다. 러너는 매번 새로 뜨므로
+          # 이게 없으면 Dockerfile의 의존성 레이어가 매 실행 무효가 된다.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
