@@ -38,6 +38,18 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+// Docker 빌드에서 "의존성 내려받기"를 소스 복사보다 먼저 끝내기 위한 태스크(Dockerfile 2단계).
+// 이것만으로 build.gradle.kts가 안 바뀌는 한 의존성 레이어가 통째로 캐시된다.
+// ⚠️ `gradlew dependencies`를 쓰면 안 된다 — 그건 의존성 "그래프"만 렌더링해서 POM 메타데이터만 받고,
+//    정작 덩치 큰 jar는 안 받는다. 파일을 실제로 받으려면 configuration을 resolve해야 한다.
+// bootJar에 필요한 것만 담는다(test 계열 제외) — Testcontainers·JUnit은 런타임 이미지에 불필요하다.
+tasks.register("resolveDependencies") {
+    doLast {
+        listOf("compileClasspath", "runtimeClasspath", "annotationProcessor")
+            .forEach { configurations.getByName(it).resolve() }
+    }
+}
+
 tasks.withType<Test> {
     useJUnitPlatform()
 }
