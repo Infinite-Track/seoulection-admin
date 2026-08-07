@@ -124,4 +124,15 @@ public class SurveyAdminController {
         redirectAttributes.addFlashAttribute("successMessage", "질문 문구를 수정했습니다.");
         return "redirect:/admin/survey";
     }
+
+    /** 숨김/되살리기. 이것이 문항 삭제다 — 행을 지우지 않는 이유는 서비스 주석 참조. */
+    @PostMapping("/admin/survey/questions/{questionKey}/active")
+    public String changeQuestionActive(@PathVariable String questionKey,
+                                       @RequestParam boolean active,
+                                       RedirectAttributes redirectAttributes) {
+        service.changeQuestionActive(questionKey, active);
+        redirectAttributes.addFlashAttribute("successMessage",
+                active ? "문항을 다시 노출합니다." : "문항을 숨겼습니다. 기존 응답은 그대로 남습니다.");
+        return "redirect:/admin/survey";
+    }
 }

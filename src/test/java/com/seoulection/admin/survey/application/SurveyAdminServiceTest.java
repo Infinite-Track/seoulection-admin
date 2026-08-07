@@ -38,8 +38,8 @@ class SurveyAdminServiceTest {
         jdbcTemplate.update("delete from survey_option");
         jdbcTemplate.update("delete from survey_question");
         jdbcTemplate.update("""
-                insert into survey_question (question_key, title, sort_order)
-                values ('AVOIDANCE', '회피 항목', 1), ('CONCERN', '피부 고민', 2)""");
+                insert into survey_question (question_key, title, sort_order, active)
+                values ('AVOIDANCE', '회피 항목', 1, true), ('CONCERN', '피부 고민', 2, true)""");
     }
 
     private List<SurveyOptionResult> avoidanceOptions() {
@@ -65,6 +65,45 @@ class SurveyAdminServiceTest {
         assertThatThrownBy(() -> service.createQuestion("AVOIDANCE", "다른 문구", 9))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("이미 있는 문항");
+    }
+
+    @Test
+    @DisplayName("새 문항은 활성 상태로 생성된다")
+    void createQuestion_startsActive() {
+        service.createQuestion("WATER_DIRECT", "피부 수분 상태는 어떤가요?", 3);
+
+        assertThat(questionByKey("WATER_DIRECT").active()).isTrue();
+    }
+
+    @Test
+    @DisplayName("★ 문항 숨김은 행을 지우지 않는다(soft delete) — 되살릴 수 있고 목록·과거 응답은 그대로 남는다")
+    void changeQuestionActive_isSoftDelete() {
+        service.changeQuestionActive("AVOIDANCE", false);
+
+        // 관리 화면은 숨긴 문항도 계속 보여줘야 되살릴 수 있다.
+        List<SurveyQuestionResult> questions = service.getQuestions();
+        assertThat(questions).hasSize(2);
+        assertThat(questionByKey("AVOIDANCE").active()).isFalse();
+        Long rows = jdbcTemplate.queryForObject(
+                "select count(*) from survey_question where question_key = 'AVOIDANCE'", Long.class);
+        assertThat(rows).isEqualTo(1L);
+
+        service.changeQuestionActive("AVOIDANCE", true);
+        assertThat(questionByKey("AVOIDANCE").active()).isTrue();
+    }
+
+    @Test
+    @DisplayName("없는 문항을 숨기려 하면 거부된다")
+    void changeQuestionActive_unknownKey_rejected() {
+        assertThatThrownBy(() -> service.changeQuestionActive("NOT_A_QUESTION", false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("없는 문항입니다");
+    }
+
+    private SurveyQuestionResult questionByKey(String key) {
+        return service.getQuestions().stream()
+                .filter(q -> q.key().equals(key))
+                .findFirst().orElseThrow();
     }
 
     @Test

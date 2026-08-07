@@ -46,7 +46,7 @@ public class SurveyAdminService {
         if (questionRepository.existsByKey(normalizedKey)) {
             throw new IllegalArgumentException("이미 있는 문항입니다: " + normalizedKey);
         }
-        questionRepository.save(SurveyQuestion.of(normalizedKey, title, sortOrder));
+        questionRepository.save(SurveyQuestion.create(normalizedKey, title, sortOrder));
     }
 
     /**
@@ -83,9 +83,25 @@ public class SurveyAdminService {
 
     @Transactional
     public void updateQuestionTitle(String questionKey, String title) {
-        SurveyQuestion question = questionRepository.findByKey(questionKey)
-                .orElseThrow(() -> new IllegalArgumentException("없는 문항입니다: " + questionKey));
+        SurveyQuestion question = getQuestion(questionKey);
         questionRepository.save(question.withTitle(title));
+    }
+
+    /**
+     * 문항 노출/숨김 전환. <b>이것이 문항 삭제다</b> — 이미 이 문항으로 답한 응답이 있어, 행을 지우면
+     * 그 응답이 가리키는 문항 문구를 되찾을 수 없다({@link #changeOptionActive} 참조). 되살리기도 같은 경로다.
+     *
+     * <p>숨겨도 이미 제출된 응답과 그 선택지들은 그대로 남는다 — {@code GET /survey/questions}에서만 빠진다.
+     */
+    @Transactional
+    public void changeQuestionActive(String questionKey, boolean active) {
+        SurveyQuestion question = getQuestion(questionKey);
+        questionRepository.save(question.withActive(active));
+    }
+
+    private SurveyQuestion getQuestion(String questionKey) {
+        return questionRepository.findByKey(questionKey)
+                .orElseThrow(() -> new IllegalArgumentException("없는 문항입니다: " + questionKey));
     }
 
     private List<SurveyOptionResult> findOptions(String questionKey) {

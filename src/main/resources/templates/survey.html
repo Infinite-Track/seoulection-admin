@@ -16,6 +16,8 @@
         h2 { margin: 0 0 6px; font-size: 20px; }
         .description { margin: 0 0 24px; color: #687078; }
         .card { padding: 24px; margin-bottom: 24px; background: white; border: 1px solid #e7e9ec; border-radius: 14px; }
+        .card.inactive { background: #fafbfc; }
+        .card.inactive > h2, .card.inactive > .title-form { opacity: .5; }
         .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
         label { display: block; margin-bottom: 8px; font-weight: 700; }
         .field-label { display: block; margin-bottom: 8px; font-weight: 700; }
@@ -141,11 +143,19 @@
         </form>
     </section>
 
-    <section class="card" th:each="question : ${questions}">
+    <section class="card" th:each="question : ${questions}" th:classappend="${question.active} ? '' : 'inactive'">
         <form class="title-form" th:action="@{'/admin/survey/questions/' + ${question.key}}" method="post">
             <span class="badge" th:text="${question.key}"></span>
             <input type="text" name="title" th:value="${question.title}" required>
             <button class="subtle" type="submit">문구 저장</button>
+            <span class="badge" th:if="${question.active}">노출</span>
+            <span class="badge" th:unless="${question.active}" style="background:#f0f2f5;color:#8a9198;">숨김</span>
+        </form>
+        <form th:action="@{'/admin/survey/questions/' + ${question.key} + '/active'}" method="post"
+              style="margin-bottom: 14px;">
+            <input type="hidden" name="active" th:value="${!question.active}">
+            <button th:classappend="${question.active} ? 'danger' : 'subtle'"
+                    th:text="${question.active} ? '문항 숨기기' : '문항 되살리기'" type="submit"></button>
         </form>
 
         <table th:if="${!question.options.isEmpty()}">

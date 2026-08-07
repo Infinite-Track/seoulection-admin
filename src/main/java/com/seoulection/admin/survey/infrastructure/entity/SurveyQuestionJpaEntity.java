@@ -26,21 +26,26 @@ public class SurveyQuestionJpaEntity {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
+    /** soft delete 플래그. false면 GET /survey/questions에서 빠진다(api-server SurveyService 참조). */
+    @Column(nullable = false)
+    private boolean active;
+
     protected SurveyQuestionJpaEntity() {
     }
 
-    private SurveyQuestionJpaEntity(String questionKey, String title, int sortOrder) {
+    private SurveyQuestionJpaEntity(String questionKey, String title, int sortOrder, boolean active) {
         this.questionKey = questionKey;
         this.title = title;
         this.sortOrder = sortOrder;
+        this.active = active;
     }
 
     public static SurveyQuestionJpaEntity fromDomain(SurveyQuestion question) {
         return new SurveyQuestionJpaEntity(question.getQuestionKey(), question.getTitle(),
-                question.getSortOrder());
+                question.getSortOrder(), question.isActive());
     }
 
     public SurveyQuestion toDomain() {
-        return SurveyQuestion.of(questionKey, title, sortOrder);
+        return SurveyQuestion.of(questionKey, title, sortOrder, active);
     }
 }
