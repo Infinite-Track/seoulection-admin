@@ -4,7 +4,6 @@ import com.seoulection.admin.TestcontainersConfiguration;
 import com.seoulection.admin.survey.application.dto.SurveyOptionResult;
 import com.seoulection.admin.survey.application.dto.SurveyQuestionResult;
 import com.seoulection.admin.survey.application.service.SurveyAdminService;
-import com.seoulection.admin.survey.domain.enums.SurveyQuestionKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +52,7 @@ class SurveyAdminServiceTest {
     @Test
     @DisplayName("선택지를 추가하면 활성 상태로 저장되고 코드는 대문자로 정규화된다")
     void createOption_savesActiveWithUppercasedCode() {
-        service.createOption(SurveyQuestionKey.AVOIDANCE, "fragrance_allergy", "향료 회피", 3, false);
+        service.createOption("AVOIDANCE", "fragrance_allergy", "향료 회피", null, 3, false);
 
         SurveyOptionResult saved = avoidanceOptions().get(0);
         assertThat(saved.code()).isEqualTo("FRAGRANCE_ALLERGY");
@@ -63,12 +62,24 @@ class SurveyAdminServiceTest {
     }
 
     @Test
+    @DisplayName("점수가 있는 선택지(자가진단 문항 등)는 value가 그대로 저장·수정된다")
+    void createOption_withValue_savesScore() {
+        service.createOption("AVOIDANCE", "WATER_BALANCED", "적당하다", 66, 1, true);
+
+        SurveyOptionResult saved = avoidanceOptions().get(0);
+        assertThat(saved.value()).isEqualTo(66);
+
+        service.updateOption(saved.id(), saved.label(), 100, saved.sortOrder(), saved.exclusive());
+        assertThat(avoidanceOptions().get(0).value()).isEqualTo(100);
+    }
+
+    @Test
     @DisplayName("같은 문항에 같은 코드를 또 추가하면 거부된다 — 응답이 어느 선택지를 가리키는지 모호해지므로")
     void createOption_duplicateCode_rejected() {
-        service.createOption(SurveyQuestionKey.AVOIDANCE, "PREGNANT", "임신 중", 1, false);
+        service.createOption("AVOIDANCE", "PREGNANT", "임신 중", null, 1, false);
 
         assertThatThrownBy(() ->
-                service.createOption(SurveyQuestionKey.AVOIDANCE, "PREGNANT", "다른 문구", 2, false))
+                service.createOption("AVOIDANCE", "PREGNANT", "다른 문구", null, 2, false))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("이미 있는 코드");
     }
@@ -77,17 +88,17 @@ class SurveyAdminServiceTest {
     @DisplayName("소문자·공백이 섞인 코드 형식은 거부된다")
     void createOption_invalidCodeFormat_rejected() {
         assertThatThrownBy(() ->
-                service.createOption(SurveyQuestionKey.AVOIDANCE, "fragrance allergy", "향료", 1, false))
+                service.createOption("AVOIDANCE", "fragrance allergy", "향료", null, 1, false))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    @DisplayName("★ 수정은 문구·순서·단독선택만 바꾸고 code는 그대로다 — 기존 응답이 가리키는 키가 유지된다")
+    @DisplayName("★ 수정은 문구·점수·순서·단독선택만 바꾸고 code는 그대로다 — 기존 응답이 가리키는 키가 유지된다")
     void updateOption_keepsCode() {
-        service.createOption(SurveyQuestionKey.AVOIDANCE, "PREGNANT", "임신 중", 1, false);
+        service.createOption("AVOIDANCE", "PREGNANT", "임신 중", null, 1, false);
         Long id = avoidanceOptions().get(0).id();
 
-        service.updateOption(id, "임신 중이에요", 9, true);
+        service.updateOption(id, "임신 중이에요", null, 9, true);
 
         SurveyOptionResult updated = avoidanceOptions().get(0);
         assertThat(updated.code()).isEqualTo("PREGNANT");
@@ -99,7 +110,7 @@ class SurveyAdminServiceTest {
     @Test
     @DisplayName("★ 숨김은 행을 지우지 않는다(soft delete) — 되살릴 수 있고 과거 응답의 문구도 남는다")
     void changeOptionActive_isSoftDelete() {
-        service.createOption(SurveyQuestionKey.AVOIDANCE, "PREGNANT", "임신 중", 1, false);
+        service.createOption("AVOIDANCE", "PREGNANT", "임신 중", null, 1, false);
         Long id = avoidanceOptions().get(0).id();
 
         service.changeOptionActive(id, false);
@@ -117,8 +128,8 @@ class SurveyAdminServiceTest {
     @Test
     @DisplayName("선택지는 sortOrder 순으로 조회된다 — 관리 화면 순서가 곧 사용자 화면 순서다")
     void getQuestions_ordersBySortOrder() {
-        service.createOption(SurveyQuestionKey.AVOIDANCE, "SECOND", "둘째", 2, false);
-        service.createOption(SurveyQuestionKey.AVOIDANCE, "FIRST", "첫째", 1, false);
+        service.createOption("AVOIDANCE", "SECOND", "둘째", null, 2, false);
+        service.createOption("AVOIDANCE", "FIRST", "첫째", null, 1, false);
 
         assertThat(avoidanceOptions().stream().map(SurveyOptionResult::code))
                 .containsExactly("FIRST", "SECOND");
@@ -127,7 +138,7 @@ class SurveyAdminServiceTest {
     @Test
     @DisplayName("질문 문구 수정은 새 행을 만들지 않는다(자연 PK upsert)")
     void updateQuestionTitle_upsertsInPlace() {
-        service.updateQuestionTitle(SurveyQuestionKey.AVOIDANCE, "바뀐 질문 문구");
+        service.updateQuestionTitle("AVOIDANCE", "바뀐 질문 문구");
 
         List<SurveyQuestionResult> questions = service.getQuestions();
         assertThat(questions).hasSize(2);

@@ -1,7 +1,6 @@
 package com.seoulection.admin.survey.presentation.controller;
 
 import com.seoulection.admin.survey.application.service.SurveyAdminService;
-import com.seoulection.admin.survey.domain.enums.SurveyQuestionKey;
 import com.seoulection.admin.survey.presentation.dto.SurveyOptionCreateRequest;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
@@ -49,8 +48,8 @@ public class SurveyAdminController {
         }
 
         try {
-            service.createOption(SurveyQuestionKey.valueOf(request.getQuestionKey()),
-                    request.getCode(), request.getLabel(), request.getSortOrder(), request.isExclusive());
+            service.createOption(request.getQuestionKey(), request.getCode(), request.getLabel(),
+                    request.getValue(), request.getSortOrder(), request.isExclusive());
         } catch (IllegalArgumentException e) {
             // 코드 중복·형식 위반은 사용자가 고칠 수 있는 입력 오류다 → 폼으로 되돌려 사유를 보여준다.
             bindingResult.rejectValue("code", "invalid", e.getMessage());
@@ -64,10 +63,11 @@ public class SurveyAdminController {
     @PostMapping("/admin/survey/options/{optionId}")
     public String updateOption(@PathVariable Long optionId,
                                @RequestParam String label,
+                               @RequestParam(required = false) Integer value,
                                @RequestParam int sortOrder,
                                @RequestParam(defaultValue = "false") boolean exclusive,
                                RedirectAttributes redirectAttributes) {
-        service.updateOption(optionId, label, sortOrder, exclusive);
+        service.updateOption(optionId, label, value, sortOrder, exclusive);
         redirectAttributes.addFlashAttribute("successMessage", "선택지를 수정했습니다.");
         return "redirect:/admin/survey";
     }
@@ -84,7 +84,7 @@ public class SurveyAdminController {
     }
 
     @PostMapping("/admin/survey/questions/{questionKey}")
-    public String updateQuestionTitle(@PathVariable SurveyQuestionKey questionKey,
+    public String updateQuestionTitle(@PathVariable String questionKey,
                                       @RequestParam String title,
                                       RedirectAttributes redirectAttributes) {
         service.updateQuestionTitle(questionKey, title);

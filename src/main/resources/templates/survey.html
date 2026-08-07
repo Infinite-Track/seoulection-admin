@@ -64,9 +64,9 @@
     <div class="success" th:if="${successMessage}" th:text="${successMessage}"></div>
 
     <p class="notice">
-        <strong>코드(code)는 만든 뒤 바꿀 수 없습니다.</strong>
-        이미 제출된 사용자 응답이 이 문자열을 그대로 참조하고 있어, 코드를 바꾸면 과거 응답이 가리키는 대상이 사라집니다.
-        같은 이유로 <strong>삭제는 '숨김'으로 동작</strong>합니다 — 신규 설문에서만 사라지고 기존 응답은 보존됩니다.
+        <strong>문항 키(questionKey)·선택지 코드(code)는 만든 뒤 바꿀 수 없습니다.</strong>
+        이미 제출된 사용자 응답이 이 문자열을 그대로 참조하고 있어, 바꾸면 과거 응답이 가리키는 대상이 사라집니다.
+        선택지의 <strong>삭제는 '숨김'으로 동작</strong>합니다 — 신규 설문에서만 사라지고 기존 응답은 보존됩니다.
     </p>
 
     <section class="card">
@@ -76,8 +76,10 @@
                 <div class="question-field">
                     <span class="field-label">문항</span>
                     <div class="toggle-group">
-                        <label class="toggle-option"><input type="radio" th:field="*{questionKey}" value="AVOIDANCE"><span>회피 성분/상태</span></label>
-                        <label class="toggle-option"><input type="radio" th:field="*{questionKey}" value="CONCERN"><span>피부 고민</span></label>
+                        <label class="toggle-option" th:each="question : ${questions}">
+                            <input type="radio" th:field="*{questionKey}" th:value="${question.key}">
+                            <span th:text="${question.key}"></span>
+                        </label>
                     </div>
                     <p class="error" th:if="${#fields.hasErrors('questionKey')}" th:errors="*{questionKey}"></p>
                 </div>
@@ -90,6 +92,11 @@
                     <label for="label">노출 문구</label>
                     <input type="text" id="label" th:field="*{label}" placeholder="사용자에게 보일 문구" autocomplete="off">
                     <p class="error" th:if="${#fields.hasErrors('label')}" th:errors="*{label}"></p>
+                </div>
+                <div>
+                    <label for="value">점수(0~100, 선택)</label>
+                    <input type="number" id="value" th:field="*{value}" min="0" max="100" placeholder="카테고리성 선택지는 비워두세요">
+                    <p class="error" th:if="${#fields.hasErrors('value')}" th:errors="*{value}"></p>
                 </div>
                 <div>
                     <label for="sortOrder">노출 순서</label>
@@ -119,15 +126,16 @@
 
         <table th:if="${!question.options.isEmpty()}">
             <thead>
-            <tr><th>코드</th><th>노출 문구</th><th>순서</th><th>단독</th><th>상태</th><th></th></tr>
+            <tr><th>코드</th><th>노출 문구</th><th>점수</th><th>순서</th><th>단독</th><th>상태</th><th></th></tr>
             </thead>
             <tbody>
             <tr th:each="option : ${question.options}" th:classappend="${option.active} ? '' : 'inactive'">
                 <td><code th:text="${option.code}"></code></td>
-                <td colspan="3">
+                <td colspan="4">
                     <form th:action="@{'/admin/survey/options/' + ${option.id}}" method="post"
                           style="display: flex; gap: 6px; align-items: center;">
                         <input type="text" name="label" th:value="${option.label}" required>
+                        <input type="number" name="value" th:value="${option.value}" min="0" max="100" placeholder="점수">
                         <input type="number" name="sortOrder" th:value="${option.sortOrder}" min="0" required>
                         <label class="toggle-option">
                             <input type="checkbox" name="exclusive" value="true" th:checked="${option.exclusive}">

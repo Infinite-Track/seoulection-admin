@@ -12,6 +12,6 @@ public record SurveyQuestionResult(
 ) {
 
     public static SurveyQuestionResult of(SurveyQuestion question, List<SurveyOptionResult> options) {
-        return new SurveyQuestionResult(question.getQuestionKey().name(), question.getTitle(), options);
+        return new SurveyQuestionResult(question.getQuestionKey(), question.getTitle(), options);
     }
 }

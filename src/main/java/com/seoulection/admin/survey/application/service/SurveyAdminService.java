@@ -4,7 +4,6 @@ import com.seoulection.admin.survey.application.dto.SurveyOptionResult;
 import com.seoulection.admin.survey.application.dto.SurveyQuestionResult;
 import com.seoulection.admin.survey.domain.entity.SurveyOption;
 import com.seoulection.admin.survey.domain.entity.SurveyQuestion;
-import com.seoulection.admin.survey.domain.enums.SurveyQuestionKey;
 import com.seoulection.admin.survey.domain.repository.SurveyOptionRepository;
 import com.seoulection.admin.survey.domain.repository.SurveyQuestionRepository;
 import org.springframework.stereotype.Service;
@@ -42,20 +41,21 @@ public class SurveyAdminService {
      * 가리키는지 알 수 없어진다(DB 유니크 제약도 있지만 여기서 먼저 걸러 안내 문구를 준다).
      */
     @Transactional
-    public void createOption(SurveyQuestionKey questionKey, String code, String label,
+    public void createOption(String questionKey, String code, String label, Integer value,
                              int sortOrder, boolean exclusive) {
         String normalizedCode = code == null ? "" : code.trim().toUpperCase();
         if (optionRepository.existsByQuestionKeyAndCode(questionKey, normalizedCode)) {
             throw new IllegalArgumentException("이미 있는 코드입니다: " + normalizedCode);
         }
-        optionRepository.save(SurveyOption.create(questionKey, normalizedCode, label, sortOrder, exclusive));
+        optionRepository.save(
+                SurveyOption.create(questionKey, normalizedCode, label, value, sortOrder, exclusive));
     }
 
-    /** 문구·순서·단독선택 수정. {@code code}는 대상이 아니다(도메인이 막는다). */
+    /** 문구·점수·순서·단독선택 수정. {@code code}는 대상이 아니다(도메인이 막는다). */
     @Transactional
-    public void updateOption(Long optionId, String label, int sortOrder, boolean exclusive) {
+    public void updateOption(Long optionId, String label, Integer value, int sortOrder, boolean exclusive) {
         SurveyOption option = getOption(optionId);
-        optionRepository.save(option.withDetails(label, sortOrder, exclusive));
+        optionRepository.save(option.withDetails(label, value, sortOrder, exclusive));
     }
 
     /**
@@ -69,13 +69,13 @@ public class SurveyAdminService {
     }
 
     @Transactional
-    public void updateQuestionTitle(SurveyQuestionKey questionKey, String title) {
+    public void updateQuestionTitle(String questionKey, String title) {
         SurveyQuestion question = questionRepository.findByKey(questionKey)
                 .orElseThrow(() -> new IllegalArgumentException("없는 문항입니다: " + questionKey));
         questionRepository.save(question.withTitle(title));
     }
 
-    private List<SurveyOptionResult> findOptions(SurveyQuestionKey questionKey) {
+    private List<SurveyOptionResult> findOptions(String questionKey) {
         return optionRepository.findByQuestionKey(questionKey).stream()
                 .map(SurveyOptionResult::from)
                 .toList();

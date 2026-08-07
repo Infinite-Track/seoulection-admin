@@ -7,13 +7,14 @@ public record SurveyOptionResult(
         Long id,
         String code,
         String label,
+        Integer value,
         int sortOrder,
         boolean exclusive,
         boolean active
 ) {
 
     public static SurveyOptionResult from(SurveyOption o) {
-        return new SurveyOptionResult(o.getId(), o.getCode(), o.getLabel(), o.getSortOrder(),
+        return new SurveyOptionResult(o.getId(), o.getCode(), o.getLabel(), o.getValue(), o.getSortOrder(),
                 o.isExclusive(), o.isActive());
     }
 }
