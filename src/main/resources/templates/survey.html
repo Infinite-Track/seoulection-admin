@@ -70,6 +70,30 @@
     </p>
 
     <section class="card">
+        <h2>문항 추가</h2>
+        <form th:action="@{/admin/survey/questions}" th:object="${questionRequest}" method="post">
+            <div class="form-grid">
+                <div>
+                    <label for="questionKey">문항 키</label>
+                    <input type="text" id="questionKey" th:field="*{questionKey}" placeholder="SKIN_TYPE_CHECK" autocomplete="off">
+                    <p class="error" th:if="${#fields.hasErrors('questionKey')}" th:errors="*{questionKey}"></p>
+                </div>
+                <div class="question-field">
+                    <label for="questionTitle">문항 문구</label>
+                    <input type="text" id="questionTitle" th:field="*{title}" placeholder="사용자에게 보일 질문 문구" autocomplete="off">
+                    <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+                </div>
+                <div>
+                    <label for="questionSortOrder">노출 순서</label>
+                    <input type="number" id="questionSortOrder" th:field="*{sortOrder}" min="0" placeholder="0">
+                    <p class="error" th:if="${#fields.hasErrors('sortOrder')}" th:errors="*{sortOrder}"></p>
+                </div>
+            </div>
+            <button type="submit">문항 추가</button>
+        </form>
+    </section>
+
+    <section class="card">
         <h2>선택지 추가</h2>
         <form th:action="@{/admin/survey/options}" th:object="${request}" method="post">
             <div class="form-grid">

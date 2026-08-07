@@ -50,6 +50,24 @@ class SurveyAdminServiceTest {
     }
 
     @Test
+    @DisplayName("문항을 추가하면 목록에 새 문항이 나타난다 — 문항 집합은 코드에 고정돼 있지 않다")
+    void createQuestion_addsNewQuestion() {
+        service.createQuestion("water_direct", "피부 수분 상태는 어떤가요?", 3);
+
+        List<SurveyQuestionResult> questions = service.getQuestions();
+        assertThat(questions).hasSize(3);
+        assertThat(questions.stream().map(SurveyQuestionResult::key)).contains("WATER_DIRECT");
+    }
+
+    @Test
+    @DisplayName("이미 있는 문항 키로 또 추가하면 거부된다 — 자연 PK라 그냥 저장하면 upsert로 덮어써 버린다")
+    void createQuestion_duplicateKey_rejected() {
+        assertThatThrownBy(() -> service.createQuestion("AVOIDANCE", "다른 문구", 9))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("이미 있는 문항");
+    }
+
+    @Test
     @DisplayName("선택지를 추가하면 활성 상태로 저장되고 코드는 대문자로 정규화된다")
     void createOption_savesActiveWithUppercasedCode() {
         service.createOption("AVOIDANCE", "fragrance_allergy", "향료 회피", null, 3, false);

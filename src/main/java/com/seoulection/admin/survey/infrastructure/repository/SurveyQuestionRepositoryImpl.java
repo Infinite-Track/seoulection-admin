@@ -31,6 +31,11 @@ public class SurveyQuestionRepositoryImpl implements SurveyQuestionRepository {
     }
 
     @Override
+    public boolean existsByKey(String questionKey) {
+        return jpaRepository.existsById(questionKey);
+    }
+
+    @Override
     public SurveyQuestion save(SurveyQuestion question) {
         return jpaRepository.save(SurveyQuestionJpaEntity.fromDomain(question)).toDomain();
     }

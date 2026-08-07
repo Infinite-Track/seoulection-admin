@@ -37,6 +37,19 @@ public class SurveyAdminService {
     }
 
     /**
+     * 문항 추가. {@code questionKey}는 자연 PK라 유일해야 한다 — 중복을 그냥 저장하면 upsert라서
+     * 기존 문항을 조용히 덮어써 버린다(제목·순서가 실수로 바뀐다). 그래서 여기서 먼저 걸러 안내한다.
+     */
+    @Transactional
+    public void createQuestion(String questionKey, String title, int sortOrder) {
+        String normalizedKey = questionKey == null ? "" : questionKey.trim().toUpperCase();
+        if (questionRepository.existsByKey(normalizedKey)) {
+            throw new IllegalArgumentException("이미 있는 문항입니다: " + normalizedKey);
+        }
+        questionRepository.save(SurveyQuestion.of(normalizedKey, title, sortOrder));
+    }
+
+    /**
      * 선택지 추가. {@code code}는 문항 안에서 유일해야 한다 — 중복을 허용하면 사용자 응답이 어느 쪽을
      * 가리키는지 알 수 없어진다(DB 유니크 제약도 있지만 여기서 먼저 걸러 안내 문구를 준다).
      */

@@ -2,6 +2,7 @@ package com.seoulection.admin.survey.presentation.controller;
 
 import com.seoulection.admin.survey.application.service.SurveyAdminService;
 import com.seoulection.admin.survey.presentation.dto.SurveyOptionCreateRequest;
+import com.seoulection.admin.survey.presentation.dto.SurveyQuestionCreateRequest;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -33,8 +34,38 @@ public class SurveyAdminController {
         if (!model.containsAttribute("request")) {
             model.addAttribute("request", new SurveyOptionCreateRequest());
         }
+        if (!model.containsAttribute("questionRequest")) {
+            model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
+        }
         model.addAttribute("questions", service.getQuestions());
         return "survey";
+    }
+
+    /**
+     * 문항 추가. api-server가 문항 집합을 코드에 고정하지 않으므로 여기서 자유롭게 늘릴 수 있다 —
+     * 단 {@code questionKey}는 자연 PK라 중복이면 거부한다(서비스 주석 참조).
+     */
+    @PostMapping("/admin/survey/questions")
+    public String createQuestion(@Valid @ModelAttribute("questionRequest") SurveyQuestionCreateRequest request,
+                                 BindingResult bindingResult,
+                                 Model model,
+                                 RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("request", new SurveyOptionCreateRequest());
+            model.addAttribute("questions", service.getQuestions());
+            return "survey";
+        }
+
+        try {
+            service.createQuestion(request.getQuestionKey(), request.getTitle(), request.getSortOrder());
+        } catch (IllegalArgumentException e) {
+            bindingResult.rejectValue("questionKey", "invalid", e.getMessage());
+            model.addAttribute("request", new SurveyOptionCreateRequest());
+            model.addAttribute("questions", service.getQuestions());
+            return "survey";
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "문항을 추가했습니다.");
+        return "redirect:/admin/survey";
     }
 
     @PostMapping("/admin/survey/options")
@@ -43,6 +74,7 @@ public class SurveyAdminController {
                                Model model,
                                RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
+            model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
             model.addAttribute("questions", service.getQuestions());
             return "survey";
         }
@@ -53,6 +85,7 @@ public class SurveyAdminController {
         } catch (IllegalArgumentException e) {
             // 코드 중복·형식 위반은 사용자가 고칠 수 있는 입력 오류다 → 폼으로 되돌려 사유를 보여준다.
             bindingResult.rejectValue("code", "invalid", e.getMessage());
+            model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
             model.addAttribute("questions", service.getQuestions());
             return "survey";
         }

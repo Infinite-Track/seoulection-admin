@@ -12,5 +12,7 @@ public interface SurveyQuestionRepository {
 
     Optional<SurveyQuestion> findByKey(String questionKey);
 
+    boolean existsByKey(String questionKey);
+
     SurveyQuestion save(SurveyQuestion question);
 }
