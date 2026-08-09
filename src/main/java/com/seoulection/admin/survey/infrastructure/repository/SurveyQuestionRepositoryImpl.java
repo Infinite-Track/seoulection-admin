@@ -1,7 +1,6 @@
 package com.seoulection.admin.survey.infrastructure.repository;
 
 import com.seoulection.admin.survey.domain.entity.SurveyQuestion;
-import com.seoulection.admin.survey.domain.enums.SurveyQuestionKey;
 import com.seoulection.admin.survey.domain.repository.SurveyQuestionRepository;
 import com.seoulection.admin.survey.infrastructure.entity.SurveyQuestionJpaEntity;
 import org.springframework.stereotype.Repository;
@@ -27,8 +26,13 @@ public class SurveyQuestionRepositoryImpl implements SurveyQuestionRepository {
     }
 
     @Override
-    public Optional<SurveyQuestion> findByKey(SurveyQuestionKey questionKey) {
+    public Optional<SurveyQuestion> findByKey(String questionKey) {
         return jpaRepository.findById(questionKey).map(SurveyQuestionJpaEntity::toDomain);
+    }
+
+    @Override
+    public boolean existsByKey(String questionKey) {
+        return jpaRepository.existsById(questionKey);
     }
 
     @Override

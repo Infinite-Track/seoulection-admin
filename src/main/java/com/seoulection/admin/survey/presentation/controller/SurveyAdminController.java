@@ -1,8 +1,8 @@
 package com.seoulection.admin.survey.presentation.controller;
 
 import com.seoulection.admin.survey.application.service.SurveyAdminService;
-import com.seoulection.admin.survey.domain.enums.SurveyQuestionKey;
 import com.seoulection.admin.survey.presentation.dto.SurveyOptionCreateRequest;
+import com.seoulection.admin.survey.presentation.dto.SurveyQuestionCreateRequest;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -34,8 +34,38 @@ public class SurveyAdminController {
         if (!model.containsAttribute("request")) {
             model.addAttribute("request", new SurveyOptionCreateRequest());
         }
+        if (!model.containsAttribute("questionRequest")) {
+            model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
+        }
         model.addAttribute("questions", service.getQuestions());
         return "survey";
+    }
+
+    /**
+     * 문항 추가. api-server가 문항 집합을 코드에 고정하지 않으므로 여기서 자유롭게 늘릴 수 있다 —
+     * 단 {@code questionKey}는 자연 PK라 중복이면 거부한다(서비스 주석 참조).
+     */
+    @PostMapping("/admin/survey/questions")
+    public String createQuestion(@Valid @ModelAttribute("questionRequest") SurveyQuestionCreateRequest request,
+                                 BindingResult bindingResult,
+                                 Model model,
+                                 RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("request", new SurveyOptionCreateRequest());
+            model.addAttribute("questions", service.getQuestions());
+            return "survey";
+        }
+
+        try {
+            service.createQuestion(request.getQuestionKey(), request.getTitle(), request.getSortOrder());
+        } catch (IllegalArgumentException e) {
+            bindingResult.rejectValue("questionKey", "invalid", e.getMessage());
+            model.addAttribute("request", new SurveyOptionCreateRequest());
+            model.addAttribute("questions", service.getQuestions());
+            return "survey";
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "문항을 추가했습니다.");
+        return "redirect:/admin/survey";
     }
 
     @PostMapping("/admin/survey/options")
@@ -44,16 +74,18 @@ public class SurveyAdminController {
                                Model model,
                                RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
+            model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
             model.addAttribute("questions", service.getQuestions());
             return "survey";
         }
 
         try {
-            service.createOption(SurveyQuestionKey.valueOf(request.getQuestionKey()),
-                    request.getCode(), request.getLabel(), request.getSortOrder(), request.isExclusive());
+            service.createOption(request.getQuestionKey(), request.getCode(), request.getLabel(),
+                    request.getValue(), request.getSortOrder(), request.isExclusive());
         } catch (IllegalArgumentException e) {
             // 코드 중복·형식 위반은 사용자가 고칠 수 있는 입력 오류다 → 폼으로 되돌려 사유를 보여준다.
             bindingResult.rejectValue("code", "invalid", e.getMessage());
+            model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
             model.addAttribute("questions", service.getQuestions());
             return "survey";
         }
@@ -64,10 +96,11 @@ public class SurveyAdminController {
     @PostMapping("/admin/survey/options/{optionId}")
     public String updateOption(@PathVariable Long optionId,
                                @RequestParam String label,
+                               @RequestParam(required = false) Integer value,
                                @RequestParam int sortOrder,
                                @RequestParam(defaultValue = "false") boolean exclusive,
                                RedirectAttributes redirectAttributes) {
-        service.updateOption(optionId, label, sortOrder, exclusive);
+        service.updateOption(optionId, label, value, sortOrder, exclusive);
         redirectAttributes.addFlashAttribute("successMessage", "선택지를 수정했습니다.");
         return "redirect:/admin/survey";
     }
@@ -84,11 +117,22 @@ public class SurveyAdminController {
     }
 
     @PostMapping("/admin/survey/questions/{questionKey}")
-    public String updateQuestionTitle(@PathVariable SurveyQuestionKey questionKey,
+    public String updateQuestionTitle(@PathVariable String questionKey,
                                       @RequestParam String title,
                                       RedirectAttributes redirectAttributes) {
         service.updateQuestionTitle(questionKey, title);
         redirectAttributes.addFlashAttribute("successMessage", "질문 문구를 수정했습니다.");
+        return "redirect:/admin/survey";
+    }
+
+    /** 숨김/되살리기. 이것이 문항 삭제다 — 행을 지우지 않는 이유는 서비스 주석 참조. */
+    @PostMapping("/admin/survey/questions/{questionKey}/active")
+    public String changeQuestionActive(@PathVariable String questionKey,
+                                       @RequestParam boolean active,
+                                       RedirectAttributes redirectAttributes) {
+        service.changeQuestionActive(questionKey, active);
+        redirectAttributes.addFlashAttribute("successMessage",
+                active ? "문항을 다시 노출합니다." : "문항을 숨겼습니다. 기존 응답은 그대로 남습니다.");
         return "redirect:/admin/survey";
     }
 }

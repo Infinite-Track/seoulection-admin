@@ -1,5 +1,7 @@
 package com.seoulection.admin.survey.presentation.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -25,6 +27,11 @@ public class SurveyOptionCreateRequest {
     @NotBlank(message = "노출 문구를 입력해 주세요.")
     @Size(max = 255, message = "노출 문구는 255자 이하여야 합니다.")
     private String label;
+
+    /** 카테고리성 선택지(회피 항목 등)는 점수 개념이 없으므로 비워 둘 수 있다. */
+    @Min(value = 0, message = "점수는 0 이상이어야 합니다.")
+    @Max(value = 100, message = "점수는 100 이하여야 합니다.")
+    private Integer value;
 
     @NotNull(message = "노출 순서를 입력해 주세요.")
     @PositiveOrZero(message = "노출 순서는 0 이상이어야 합니다.")
@@ -54,6 +61,14 @@ public class SurveyOptionCreateRequest {
 
     public void setLabel(String label) {
         this.label = label;
+    }
+
+    public Integer getValue() {
+        return value;
+    }
+
+    public void setValue(Integer value) {
+        this.value = value;
     }
 
     public Integer getSortOrder() {

@@ -4,78 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>YouTube 채널 관리 | Seoulection Admin</title>
-    <style>
-        :root { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #f6f7f9; color: #202124; }
-        main { width: min(1080px, calc(100% - 40px)); margin: 42px auto; }
-        nav { display: flex; gap: 8px; margin-bottom: 30px; }
-        nav a { padding: 10px 14px; border-radius: 8px; color: #525960; text-decoration: none; }
-        nav a.active { background: #1f6feb; color: white; }
-        h1 { margin-bottom: 8px; }
-        .description { margin: 0 0 24px; color: #687078; }
-        .card { padding: 24px; margin-bottom: 24px; background: white; border: 1px solid #e7e9ec; border-radius: 14px; }
-        label { display: block; margin-bottom: 10px; font-weight: 700; }
-        .form-row { display: flex; gap: 10px; }
-        input { width: 100%; height: 44px; padding: 0 14px; border: 1px solid #cdd2d8; border-radius: 9px; font-size: 15px; }
-        button { height: 44px; padding: 0 20px; border: 0; border-radius: 9px; background: #1f6feb; color: white; font-weight: 700; }
-        .error { color: #c62828; font-size: 14px; }
-        .success { padding: 12px 14px; margin-bottom: 18px; border-radius: 9px; background: #e9f7ef; color: #18733f; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 13px 12px; border-bottom: 1px solid #eceef0; text-align: left; }
-        th { color: #687078; font-size: 13px; }
-        td { font-size: 14px; }
-        td a { color: #1f6feb; text-decoration: none; }
-        .pending { color: #8a9198; }
-        .empty { padding: 36px; color: #8a9198; text-align: center; }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
 </head>
 <body>
-<main>
-    <nav>
-        <a th:href="@{/admin}">홈</a>
-        <a class="active" th:href="@{/admin/youtubers}">유튜버 채널</a>
-        <a th:href="@{/admin/videos}">영상</a>
-        <a th:href="@{/admin/products}">제품</a>
-        <a th:href="@{/admin/survey}">설문</a>
-    </nav>
-    <h1>유튜버 채널 등록</h1>
-    <p class="description">파이프라인이 주기적으로 확인할 YouTube 채널 링크를 등록합니다.</p>
-    <div class="success" th:if="${successMessage}" th:text="${successMessage}"></div>
-
-    <section class="card">
-        <form th:action="@{/admin/youtubers}" th:object="${request}" method="post">
-            <label for="channelName">채널명</label>
-            <div class="form-row">
-                <input id="channelName" th:field="*{channelName}" placeholder="채널명" autocomplete="off">
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='youtubers')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <h1>유튜버 채널 관리</h1>
+                <p class="description">파이프라인이 주기적으로 확인할 YouTube 채널 링크를 등록합니다.</p>
             </div>
-            <p class="error" th:if="${#fields.hasErrors('channelName')}" th:errors="*{channelName}"></p>
-            <label for="url">YouTube 채널 링크</label>
-            <div class="form-row">
-                <input id="url" th:field="*{url}" placeholder="https://www.youtube.com/@channel" autocomplete="off">
-                <button type="submit">채널 등록</button>
-            </div>
-            <p class="error" th:if="${#fields.hasErrors('url')}" th:errors="*{url}"></p>
-        </form>
-    </section>
+        </header>
+        <main class="content">
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
 
-    <section class="card">
-        <h2>등록된 채널</h2>
-        <table th:if="${!youtubers.isEmpty()}">
-            <thead><tr><th>채널명</th><th>채널 ID</th><th>URL</th><th>마지막 확인</th></tr></thead>
-            <tbody>
-            <tr th:each="youtuber : ${youtubers}">
-                <td th:text="${youtuber.channelName ?: '파이프라인 확인 전'}"
-                    th:classappend="${youtuber.channelName == null} ? 'pending' : ''"></td>
-                <td th:text="${youtuber.channelId ?: '파이프라인 확인 전'}"
-                    th:classappend="${youtuber.channelId == null} ? 'pending' : ''"></td>
-                <td><a th:href="${youtuber.url}" th:text="${youtuber.url}" target="_blank" rel="noopener"></a></td>
-                <td th:text="${youtuber.lastCheckedAt == null ? '확인 전' : #temporals.format(youtuber.lastCheckedAt, 'yyyy-MM-dd HH:mm')}"></td>
-            </tr>
-            </tbody>
-        </table>
-        <p class="empty" th:if="${youtubers.isEmpty()}">등록된 채널이 없습니다.</p>
-    </section>
-</main>
+            <section class="card">
+                <h2>채널 등록</h2>
+                <form th:action="@{/admin/youtubers}" th:object="${request}" method="post">
+                    <div class="form-grid">
+                        <div>
+                            <label for="channelName">채널명</label>
+                            <input id="channelName" th:field="*{channelName}" placeholder="채널명" autocomplete="off">
+                            <p class="error" th:if="${#fields.hasErrors('channelName')}" th:errors="*{channelName}"></p>
+                        </div>
+                        <div class="span-full">
+                            <label for="url">YouTube 채널 링크</label>
+                            <div class="form-row">
+                                <input id="url" th:field="*{url}" placeholder="https://www.youtube.com/@channel" autocomplete="off">
+                            </div>
+                            <p class="error" th:if="${#fields.hasErrors('url')}" th:errors="*{url}"></p>
+                        </div>
+                    </div>
+                    <button type="submit">채널 등록</button>
+                </form>
+            </section>
+
+            <section class="card">
+                <h2>등록된 채널</h2>
+                <table th:if="${!youtubers.isEmpty()}">
+                    <thead><tr><th>채널명</th><th>채널 ID</th><th>URL</th><th>마지막 확인</th></tr></thead>
+                    <tbody>
+                    <tr th:each="youtuber : ${youtubers}">
+                        <td th:text="${youtuber.channelName ?: '파이프라인 확인 전'}"
+                            th:classappend="${youtuber.channelName == null} ? 'pending' : ''"></td>
+                        <td th:text="${youtuber.channelId ?: '파이프라인 확인 전'}"
+                            th:classappend="${youtuber.channelId == null} ? 'pending' : ''"></td>
+                        <td><a th:href="${youtuber.url}" th:text="${youtuber.url}" target="_blank" rel="noopener"></a></td>
+                        <td th:text="${youtuber.lastCheckedAt == null ? '확인 전' : #temporals.format(youtuber.lastCheckedAt, 'yyyy-MM-dd HH:mm')}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+                <div class="empty" th:if="${youtubers.isEmpty()}">
+                    <span class="empty-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="3.5"/></svg>
+                    </span>
+                    <span>등록된 채널이 없습니다.</span>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
 </body>
 </html>

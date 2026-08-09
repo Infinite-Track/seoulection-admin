@@ -4,51 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Seoulection Admin</title>
-    <style>
-        :root { font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #f6f7f9; color: #202124; }
-        main { width: min(920px, calc(100% - 40px)); margin: 64px auto; }
-        .eyebrow { margin: 0 0 8px; color: #1f6feb; font-weight: 700; }
-        h1 { margin: 0 0 10px; font-size: 34px; }
-        .description { margin: 0 0 36px; color: #687078; }
-        .menu { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .menu-card { display: block; padding: 28px; min-height: 190px; border: 1px solid #e2e5e9; border-radius: 16px; background: white; color: inherit; text-decoration: none; box-shadow: 0 10px 30px rgba(31, 35, 40, .05); transition: transform .15s, border-color .15s; }
-        .menu-card:hover { transform: translateY(-3px); border-color: #1f6feb; }
-        .icon { display: grid; width: 46px; height: 46px; margin-bottom: 28px; place-items: center; border-radius: 12px; background: #eaf2ff; color: #1f6feb; font-size: 22px; }
-        h2 { margin: 0 0 10px; font-size: 21px; }
-        .menu-card p { margin: 0; color: #687078; line-height: 1.6; }
-        @media (max-width: 650px) { .menu { grid-template-columns: 1fr; } }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
 </head>
 <body>
-<main>
-    <p class="eyebrow">SEOULECTION ADMIN</p>
-    <h1>관리자 홈</h1>
-    <p class="description">관리할 항목을 선택해 주세요.</p>
-
-    <section class="menu">
-        <a class="menu-card" th:href="@{/admin/youtubers}">
-            <span class="icon">C</span>
-            <h2>유튜버 채널 관리</h2>
-            <p>파이프라인이 주기적으로 확인할 YouTube 채널 링크를 등록하고 조회합니다.</p>
-        </a>
-        <a class="menu-card" th:href="@{/admin/videos}">
-            <span class="icon">V</span>
-            <h2>YouTube 영상 관리</h2>
-            <p>분석 파이프라인에서 처리할 개별 영상 링크를 등록하고 상태를 확인합니다.</p>
-        </a>
-        <a class="menu-card" th:href="@{/admin/products}">
-            <span class="icon">P</span>
-            <h2>제품 관리</h2>
-            <p>분석할 제품의 이름, 브랜드와 카테고리를 등록하고 처리 상태를 확인합니다.</p>
-        </a>
-        <a class="menu-card" th:href="@{/admin/survey}">
-            <span class="icon">S</span>
-            <h2>설문 관리</h2>
-            <p>사용자 설문의 질문 문구와 선택지를 추가·수정하고 노출 여부를 관리합니다.</p>
-        </a>
-    </section>
-</main>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='home')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <h1>관리자 홈</h1>
+                <p class="description">관리할 항목을 선택해 주세요.</p>
+            </div>
+        </header>
+        <main class="content">
+            <section class="menu">
+                <a class="menu-card" th:href="@{/admin/youtubers}">
+                    <span class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="3.5"/><path d="M10.75 9.3v5.4l4.5-2.7z" fill="currentColor" stroke="none"/></svg>
+                    </span>
+                    <h2>유튜버 채널 관리</h2>
+                    <p>파이프라인이 주기적으로 확인할 YouTube 채널 링크를 등록하고 조회합니다.</p>
+                </a>
+                <a class="menu-card" th:href="@{/admin/videos}">
+                    <span class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="14" height="14" rx="2.5"/><path d="m20.5 8.5-4 2.5 4 2.5z"/></svg>
+                    </span>
+                    <h2>YouTube 영상 관리</h2>
+                    <p>분석 파이프라인에서 처리할 개별 영상 링크를 등록하고 상태를 확인합니다.</p>
+                </a>
+                <a class="menu-card" th:href="@{/admin/products}">
+                    <span class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8 12 3.5 20.5 8 12 12.5z"/><path d="M3.5 8v9L12 21.5 20.5 17V8"/><path d="M12 12.5V21.5"/></svg>
+                    </span>
+                    <h2>제품 관리</h2>
+                    <p>분석할 제품의 이름, 브랜드와 카테고리를 등록하고 처리 상태를 확인합니다.</p>
+                </a>
+                <a class="menu-card" th:href="@{/admin/survey}">
+                    <span class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z"/><path d="M9 12.5h6M9 16h6M9 9h2.5"/></svg>
+                    </span>
+                    <h2>설문 관리</h2>
+                    <p>사용자 설문의 질문 문구와 선택지를 추가·수정하고 노출 여부를 관리합니다.</p>
+                </a>
+            </section>
+        </main>
+    </div>
+</div>
 </body>
 </html>

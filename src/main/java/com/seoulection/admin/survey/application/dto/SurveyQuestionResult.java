@@ -8,10 +8,12 @@ import java.util.List;
 public record SurveyQuestionResult(
         String key,
         String title,
+        boolean active,
         List<SurveyOptionResult> options
 ) {
 
     public static SurveyQuestionResult of(SurveyQuestion question, List<SurveyOptionResult> options) {
-        return new SurveyQuestionResult(question.getQuestionKey().name(), question.getTitle(), options);
+        return new SurveyQuestionResult(question.getQuestionKey(), question.getTitle(), question.isActive(),
+                options);
     }
 }
