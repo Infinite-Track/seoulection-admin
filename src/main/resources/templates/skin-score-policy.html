@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>피부 점수 정책 | Seoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='skin-score-policy')}"></aside>
+    <div class="shell-main">
+        <header class="topbar"><div><h1>피부 점수 정책</h1>
+            <p class="description">설문과 사진 점수를 병합할 때 사용할 항목별 신뢰도를 관리합니다.</p></div></header>
+        <main class="content">
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <p class="alert alert-notice">
+                입력값은 최종 퍼센트가 아니라 <strong>정규화 전 신뢰도</strong>입니다.
+                예: 설문 0.8·사진 0.8은 최종 50:50입니다. 설문 답이 불일치하면 설문 신뢰도에 불일치 계수를 곱합니다.
+                저장 즉시 새 피부 결과 조회와 추천에 반영됩니다.
+            </p>
+            <section class="card">
+                <table>
+                    <thead><tr><th>피부 항목</th><th>설문 신뢰도</th><th>사진 신뢰도</th><th>불일치 계수</th><th>정책 버전</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:each="policy : ${policies}">
+                        <td><strong th:text="${policy.label}"></strong><br><code th:text="${policy.featureKey}"></code></td>
+                        <td colspan="4">
+                            <form class="policy-form" th:action="@{'/admin/skin-score-policy/' + ${policy.featureKey}}" method="post">
+                                <input type="number" name="surveyReliability" th:value="${policy.surveyReliability}" min="0" max="1" step="0.01" required>
+                                <input type="number" name="photoReliability" th:value="${policy.photoReliability}" min="0" max="1" step="0.01" required>
+                                <input type="number" name="inconsistentSurveyFactor" th:value="${policy.inconsistentSurveyFactor}" min="0" max="1" step="0.01" required>
+                                <input type="text" name="policyVersion" th:value="${policy.policyVersion}" maxlength="32" required>
+                                <button class="subtle" type="submit">저장</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>

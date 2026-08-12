@@ -177,6 +177,7 @@ a { color: inherit; }
 }
 
 .alert-success { background: var(--success-soft); color: var(--success); }
+.alert-error { background: var(--danger-soft); color: var(--danger); }
 .alert-notice { background: var(--warning-soft); color: var(--warning); }
 
 /* ── Cards ── */
@@ -242,6 +243,13 @@ input::placeholder { color: var(--text-tertiary); }
 
 .form-row { display: flex; gap: 10px; }
 .form-row input { flex: 1; }
+
+.policy-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(90px, 1fr)) auto;
+    gap: 8px;
+    align-items: center;
+}
 
 .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .toggle-option { margin: 0; cursor: pointer; }

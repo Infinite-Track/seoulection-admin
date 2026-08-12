@@ -49,6 +49,12 @@
             </span>
             <span>설문</span>
         </a>
+        <a class="nav-item" th:classappend="${active == 'skin-score-policy'} ? 'is-active' : ''" th:href="@{/admin/skin-score-policy}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="12" cy="18" r="2" fill="currentColor"/></svg>
+            </span>
+            <span>피부 점수 정책</span>
+        </a>
     </nav>
 
     <div class="sidebar-footer">Seoulection Admin</div>
