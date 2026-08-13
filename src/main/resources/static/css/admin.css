@@ -246,7 +246,7 @@ input::placeholder { color: var(--text-tertiary); }
 
 .policy-form {
     display: grid;
-    grid-template-columns: repeat(4, minmax(90px, 1fr)) auto;
+    grid-template-columns: minmax(90px, 1fr) repeat(2, minmax(80px, 1fr)) minmax(110px, 1fr) auto;
     gap: 8px;
     align-items: center;
 }

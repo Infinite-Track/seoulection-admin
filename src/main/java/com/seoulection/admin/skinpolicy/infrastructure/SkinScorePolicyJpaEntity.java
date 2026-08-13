@@ -19,6 +19,10 @@ public class SkinScorePolicyJpaEntity {
     private double photoReliability;
     @Column(name = "inconsistent_survey_factor", nullable = false)
     private double inconsistentSurveyFactor;
+    @Column(name = "bad_boundary", nullable = false)
+    private double badBoundary;
+    @Column(name = "good_boundary", nullable = false)
+    private double goodBoundary;
     @Column(name = "policy_version", nullable = false, length = 32)
     private String policyVersion;
 
@@ -30,6 +34,8 @@ public class SkinScorePolicyJpaEntity {
         this.surveyReliability = policy.surveyReliability();
         this.photoReliability = policy.photoReliability();
         this.inconsistentSurveyFactor = policy.inconsistentSurveyFactor();
+        this.badBoundary = policy.badBoundary();
+        this.goodBoundary = policy.goodBoundary();
         this.policyVersion = policy.policyVersion();
     }
 
@@ -39,6 +45,6 @@ public class SkinScorePolicyJpaEntity {
 
     public SkinScorePolicy toDomain() {
         return new SkinScorePolicy(featureKey, label, surveyReliability, photoReliability,
-                inconsistentSurveyFactor, policyVersion);
+                inconsistentSurveyFactor, badBoundary, goodBoundary, policyVersion);
     }
 }

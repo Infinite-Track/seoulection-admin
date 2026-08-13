@@ -23,12 +23,12 @@ public class SkinScorePolicyService {
     }
 
     @Transactional
-    public void update(String featureKey, double surveyReliability, double photoReliability,
-                       double inconsistentSurveyFactor, String policyVersion) {
+    public void update(String featureKey, double badBoundary, double goodBoundary, String policyVersion) {
         SkinScorePolicy current = repository.findById(featureKey)
                 .orElseThrow(() -> new IllegalArgumentException("없는 피부 항목입니다: " + featureKey))
                 .toDomain();
         repository.save(SkinScorePolicyJpaEntity.from(new SkinScorePolicy(featureKey, current.label(),
-                surveyReliability, photoReliability, inconsistentSurveyFactor, policyVersion.trim())));
+                current.surveyReliability(), current.photoReliability(), current.inconsistentSurveyFactor(),
+                badBoundary, goodBoundary, policyVersion.trim())));
     }
 }

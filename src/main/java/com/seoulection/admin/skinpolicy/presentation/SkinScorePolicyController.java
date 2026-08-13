@@ -25,14 +25,12 @@ public class SkinScorePolicyController {
 
     @PostMapping("/admin/skin-score-policy/{featureKey}")
     public String update(@PathVariable String featureKey,
-                         @RequestParam double surveyReliability,
-                         @RequestParam double photoReliability,
-                         @RequestParam double inconsistentSurveyFactor,
+                         @RequestParam double badBoundary,
+                         @RequestParam double goodBoundary,
                          @RequestParam String policyVersion,
                          RedirectAttributes redirectAttributes) {
         try {
-            service.update(featureKey, surveyReliability, photoReliability,
-                    inconsistentSurveyFactor, policyVersion);
+            service.update(featureKey, badBoundary, goodBoundary, policyVersion);
             redirectAttributes.addFlashAttribute("successMessage", featureKey + " 정책을 저장했습니다.");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());

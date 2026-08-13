@@ -2,11 +2,17 @@ package com.seoulection.admin.skinpolicy.domain;
 
 public record SkinScorePolicy(String featureKey, String label, double surveyReliability,
                               double photoReliability, double inconsistentSurveyFactor,
+                              double badBoundary, double goodBoundary,
                               String policyVersion) {
     public SkinScorePolicy {
         validate(surveyReliability, "설문 신뢰도");
         validate(photoReliability, "사진 신뢰도");
         validate(inconsistentSurveyFactor, "불일치 계수");
+        validate(badBoundary, "Bad 경계");
+        validate(goodBoundary, "Good 경계");
+        if (badBoundary > goodBoundary) {
+            throw new IllegalArgumentException("Bad 경계는 Good 경계보다 클 수 없습니다.");
+        }
         if (surveyReliability + photoReliability <= 0) {
             throw new IllegalArgumentException("설문·사진 신뢰도가 모두 0일 수 없습니다.");
         }
