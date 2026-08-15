@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>피부 점수 정책 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='skin-score-policy')}"></aside>
+    <div class="shell-main">
+        <header class="topbar"><div><h1>피부 점수 정책</h1>
+            <p class="description">항목별 점수 원천과 피부 상태 판정 경계를 관리합니다.</p></div></header>
+        <main class="content">
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <p class="alert alert-notice">
+                CORE 항목은 설문 100%, 나머지 항목은 사진 100%로 고정됩니다.
+                점수가 Bad 경계 이하이면 BAD, Good 경계 이상이면 GOOD, 사이는 OKAY로 판정합니다.
+                경계 변경은 새 피부 결과 조회와 추천에 즉시 반영됩니다.
+            </p>
+            <section class="card">
+                <table>
+                    <thead><tr><th>피부 항목</th><th>점수 원천</th><th>Bad 경계</th><th>Good 경계</th><th>정책 버전</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:each="policy : ${policies}">
+                        <td><strong th:text="${policy.label}"></strong><br><code th:text="${policy.featureKey}"></code></td>
+                        <td colspan="5">
+                            <form class="policy-form" th:action="@{'/admin/skin-score-policy/' + ${policy.featureKey}}" method="post">
+                                <strong th:text="${policy.surveyReliability > policy.photoReliability ? '설문 100%' : '사진 100%'}"></strong>
+                                <input type="number" name="badBoundary" th:value="${policy.badBoundary}" min="0" max="1" step="0.001" required>
+                                <input type="number" name="goodBoundary" th:value="${policy.goodBoundary}" min="0" max="1" step="0.001" required>
+                                <input type="text" name="policyVersion" th:value="${policy.policyVersion}" maxlength="32" required>
+                                <button class="subtle" type="submit">저장</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /*
- * Seoulection Admin — 공용 디자인 시스템.
+ * MySeoulection Admin — 공용 디자인 시스템.
  *
  * 이전엔 페이지마다(products.html, videos.html, ...) <style> 블록을 통째로 복붙해서 색상·간격이
  * 조금씩 어긋났다. 여기 한 곳에 토큰과 컴포넌트를 모아 모든 화면이 같은 값을 쓰게 한다.
@@ -177,6 +177,7 @@ a { color: inherit; }
 }
 
 .alert-success { background: var(--success-soft); color: var(--success); }
+.alert-error { background: var(--danger-soft); color: var(--danger); }
 .alert-notice { background: var(--warning-soft); color: var(--warning); }
 
 /* ── Cards ── */
@@ -242,6 +243,13 @@ input::placeholder { color: var(--text-tertiary); }
 
 .form-row { display: flex; gap: 10px; }
 .form-row input { flex: 1; }
+
+.policy-form {
+    display: grid;
+    grid-template-columns: minmax(90px, 1fr) repeat(2, minmax(80px, 1fr)) minmax(110px, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
 
 .toggle-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .toggle-option { margin: 0; cursor: pointer; }
