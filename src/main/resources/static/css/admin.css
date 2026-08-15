@@ -1,5 +1,5 @@
 /*
- * Seoulection Admin — 공용 디자인 시스템.
+ * MySeoulection Admin — 공용 디자인 시스템.
  *
  * 이전엔 페이지마다(products.html, videos.html, ...) <style> 블록을 통째로 복붙해서 색상·간격이
  * 조금씩 어긋났다. 여기 한 곳에 토큰과 컴포넌트를 모아 모든 화면이 같은 값을 쓰게 한다.
