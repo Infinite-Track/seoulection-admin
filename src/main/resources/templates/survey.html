@@ -15,6 +15,12 @@
                 <h1>설문 관리</h1>
                 <p class="description">사용자 설문의 질문 문구와 선택지를 관리합니다. 저장 즉시 사용자 화면에 반영됩니다.</p>
             </div>
+            <div class="topbar-actions">
+                <button type="button" class="button-secondary" data-panel-toggle="optionPanel" aria-expanded="false" aria-controls="optionPanel">선택지 추가</button>
+                <button type="button" class="btn-primary" data-panel-toggle="questionPanel" aria-expanded="false" aria-controls="questionPanel">
+                    <span class="btn-icon" aria-hidden="true">＋</span>문항 추가
+                </button>
+            </div>
         </header>
         <main class="content">
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
@@ -25,127 +31,63 @@
                 선택지의 <strong>삭제는 '숨김'으로 동작</strong>합니다 — 신규 설문에서만 사라지고 기존 응답은 보존됩니다.
             </p>
 
-            <section class="card">
-                <h2>문항 추가</h2>
-                <form th:action="@{/admin/survey/questions}" th:object="${questionRequest}" method="post">
-                    <div class="form-grid">
-                        <div>
-                            <label for="questionKey">문항 키</label>
-                            <input type="text" id="questionKey" th:field="*{questionKey}" placeholder="SKIN_TYPE_CHECK" autocomplete="off">
-                            <p class="error" th:if="${#fields.hasErrors('questionKey')}" th:errors="*{questionKey}"></p>
-                        </div>
-                        <div class="span-full">
-                            <label for="questionTitle">문항 문구</label>
-                            <input type="text" id="questionTitle" th:field="*{title}" placeholder="사용자에게 보일 질문 문구" autocomplete="off">
-                            <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
-                        </div>
-                        <div>
-                            <label for="questionSortOrder">노출 순서</label>
-                            <input type="number" id="questionSortOrder" th:field="*{sortOrder}" min="0" placeholder="0">
-                            <p class="error" th:if="${#fields.hasErrors('sortOrder')}" th:errors="*{sortOrder}"></p>
-                        </div>
+
+
+
+
+            <section class="card is-flush" th:each="question : ${questions}" th:classappend="${question.active} ? '' : ' is-inactive'">
+                <div class="panel-header">
+                    <form class="title-form" th:action="@{'/admin/survey/questions/' + ${question.key}}" method="post">
+                        <span class="badge badge-accent" th:text="${question.key}"></span>
+                        <input type="text" name="title" th:value="${question.title}" required>
+                        <button class="subtle" type="submit">문구 저장</button>
+                    </form>
+                    <div class="panel-header-actions">
+                        <span class="badge badge-success" th:if="${question.active}">노출</span>
+                        <span class="badge badge-neutral" th:unless="${question.active}">숨김</span>
+                        <form th:action="@{'/admin/survey/questions/' + ${question.key} + '/active'}" method="post">
+                            <input type="hidden" name="active" th:value="${!question.active}">
+                            <button th:classappend="${question.active} ? 'danger' : 'subtle'"
+                                    th:text="${question.active} ? '문항 숨기기' : '문항 되살리기'" type="submit"></button>
+                        </form>
                     </div>
-                    <button type="submit">문항 추가</button>
-                </form>
-            </section>
+                </div>
 
-            <section class="card">
-                <h2>선택지 추가</h2>
-                <form th:action="@{/admin/survey/options}" th:object="${request}" method="post">
-                    <div class="form-grid cols-4">
-                        <div class="span-full">
-                            <span class="field-label">문항</span>
-                            <div class="toggle-group">
-                                <label class="toggle-option" th:each="question : ${questions}">
-                                    <input type="radio" th:field="*{questionKey}" th:value="${question.key}">
-                                    <span th:text="${question.key}"></span>
-                                </label>
-                            </div>
-                            <p class="error" th:if="${#fields.hasErrors('questionKey')}" th:errors="*{questionKey}"></p>
-                        </div>
-                        <div>
-                            <label for="code">코드</label>
-                            <input type="text" id="code" th:field="*{code}" placeholder="FRAGRANCE_ALLERGY" autocomplete="off">
-                            <p class="error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></p>
-                        </div>
-                        <div>
-                            <label for="label">노출 문구</label>
-                            <input type="text" id="label" th:field="*{label}" placeholder="사용자에게 보일 문구" autocomplete="off">
-                            <p class="error" th:if="${#fields.hasErrors('label')}" th:errors="*{label}"></p>
-                        </div>
-                        <div>
-                            <label for="value">점수(0~100, 선택)</label>
-                            <input type="number" id="value" th:field="*{value}" min="0" max="100" placeholder="카테고리성 선택지는 비워두세요">
-                            <p class="error" th:if="${#fields.hasErrors('value')}" th:errors="*{value}"></p>
-                        </div>
-                        <div>
-                            <label for="sortOrder">노출 순서</label>
-                            <input type="number" id="sortOrder" th:field="*{sortOrder}" min="0" placeholder="0">
-                            <p class="error" th:if="${#fields.hasErrors('sortOrder')}" th:errors="*{sortOrder}"></p>
-                        </div>
-                        <div>
-                            <span class="field-label">단독 선택</span>
-                            <div class="toggle-group">
-                                <label class="toggle-option">
-                                    <input type="checkbox" th:field="*{exclusive}">
-                                    <span>다른 항목과 함께 못 고름</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="submit">선택지 추가</button>
-                </form>
-            </section>
-
-            <section class="card" th:each="question : ${questions}" th:classappend="${question.active} ? '' : 'is-inactive'">
-                <form class="title-form" th:action="@{'/admin/survey/questions/' + ${question.key}}" method="post">
-                    <span class="badge badge-accent" th:text="${question.key}"></span>
-                    <input type="text" name="title" th:value="${question.title}" required>
-                    <button class="subtle" type="submit">문구 저장</button>
-                    <span class="badge badge-accent" th:if="${question.active}">노출</span>
-                    <span class="badge badge-neutral" th:unless="${question.active}">숨김</span>
-                </form>
-                <form th:action="@{'/admin/survey/questions/' + ${question.key} + '/active'}" method="post"
-                      style="margin-bottom: 14px;">
-                    <input type="hidden" name="active" th:value="${!question.active}">
-                    <button th:classappend="${question.active} ? 'danger' : 'subtle'"
-                            th:text="${question.active} ? '문항 숨기기' : '문항 되살리기'" type="submit"></button>
-                </form>
-
-                <table th:if="${!question.options.isEmpty()}">
-                    <thead>
-                    <tr><th>코드</th><th>노출 문구</th><th>점수</th><th>순서</th><th>단독</th><th>상태</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="option : ${question.options}" th:classappend="${option.active} ? '' : 'is-inactive'">
-                        <td><code th:text="${option.code}"></code></td>
-                        <td colspan="4">
-                            <form th:action="@{'/admin/survey/options/' + ${option.id}}" method="post"
-                                  style="display: flex; gap: 6px; align-items: center;">
-                                <input type="text" name="label" th:value="${option.label}" required>
-                                <input type="number" name="value" th:value="${option.value}" min="0" max="100" placeholder="점수">
-                                <input type="number" name="sortOrder" th:value="${option.sortOrder}" min="0" required>
-                                <label class="toggle-option">
-                                    <input type="checkbox" name="exclusive" value="true" th:checked="${option.exclusive}">
-                                    <span>단독</span>
-                                </label>
-                                <button class="subtle" type="submit">저장</button>
-                            </form>
-                        </td>
-                        <td>
-                            <span class="badge badge-accent" th:if="${option.active}">노출</span>
-                            <span class="badge badge-neutral" th:unless="${option.active}">숨김</span>
-                        </td>
-                        <td class="actions">
-                            <form th:action="@{'/admin/survey/options/' + ${option.id} + '/active'}" method="post">
-                                <input type="hidden" name="active" th:value="${!option.active}">
-                                <button th:classappend="${option.active} ? 'danger' : 'subtle'"
-                                        th:text="${option.active} ? '숨기기' : '되살리기'" type="submit"></button>
-                            </form>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
+                <div class="table-scroll" th:if="${!question.options.isEmpty()}">
+                    <table class="admin-table option-table">
+                        <thead>
+                        <tr><th>코드</th><th>선택지 설정</th><th>상태</th><th>관리</th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="option : ${question.options}" th:classappend="${option.active} ? '' : 'is-inactive'">
+                            <td><code th:text="${option.code}"></code></td>
+                            <td>
+                                <form class="option-form" th:action="@{'/admin/survey/options/' + ${option.id}}" method="post">
+                                    <input type="text" name="label" th:value="${option.label}" required aria-label="노출 문구">
+                                    <input type="number" name="value" th:value="${option.value}" min="0" max="100" placeholder="점수" aria-label="점수">
+                                    <input type="number" name="sortOrder" th:value="${option.sortOrder}" min="0" required aria-label="노출 순서">
+                                    <label class="toggle-option">
+                                        <input type="checkbox" name="exclusive" value="true" th:checked="${option.exclusive}">
+                                        <span>단독</span>
+                                    </label>
+                                    <button class="subtle" type="submit">저장</button>
+                                </form>
+                            </td>
+                            <td>
+                                <span class="badge badge-success" th:if="${option.active}">노출</span>
+                                <span class="badge badge-neutral" th:unless="${option.active}">숨김</span>
+                            </td>
+                            <td class="admin-actions">
+                                <form th:action="@{'/admin/survey/options/' + ${option.id} + '/active'}" method="post">
+                                    <input type="hidden" name="active" th:value="${!option.active}">
+                                    <button th:classappend="${option.active} ? 'danger' : 'subtle'"
+                                            th:text="${option.active} ? '숨기기' : '되살리기'" type="submit"></button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
                 <div class="empty" th:if="${question.options.isEmpty()}">
                     <span class="empty-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z"/></svg>
@@ -156,5 +98,109 @@
         </main>
     </div>
 </div>
+
+<div class="drawer-scrim" data-drawer-scrim></div>
+
+<aside class="drawer" id="questionPanel" role="dialog" aria-modal="true"
+       aria-labelledby="questionPanelTitle" th:classappend="${questionFormOpen} ? ' is-open' : ''">
+    <div class="drawer-header">
+        <div>
+            <h2 id="questionPanelTitle">문항 추가</h2>
+            <p class="card-subtitle">문항 키는 만든 뒤 바꿀 수 없습니다.</p>
+        </div>
+        <button type="button" class="btn-ghost" data-panel-toggle="questionPanel" aria-label="닫기">닫기</button>
+    </div>
+    <form th:action="@{/admin/survey/questions}" th:object="${questionRequest}" method="post">
+        <div class="drawer-body">
+            <div class="form-section">
+                <div class="form-grid">
+                    <div>
+                        <label for="questionKey">문항 키</label>
+                        <input type="text" id="questionKey" th:field="*{questionKey}" placeholder="SKIN_TYPE_CHECK" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('questionKey')}" th:errors="*{questionKey}"></p>
+                    </div>
+                    <div>
+                        <label for="questionSortOrder">노출 순서</label>
+                        <input type="number" id="questionSortOrder" th:field="*{sortOrder}" min="0" placeholder="0">
+                        <p class="error" th:if="${#fields.hasErrors('sortOrder')}" th:errors="*{sortOrder}"></p>
+                    </div>
+                    <div class="span-full">
+                        <label for="questionTitle">문항 문구</label>
+                        <input type="text" id="questionTitle" th:field="*{title}" placeholder="사용자에게 보일 질문 문구" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-footer">
+            <button type="button" class="button-secondary" data-panel-toggle="questionPanel">취소</button>
+            <button type="submit" class="btn-primary">문항 추가</button>
+        </div>
+    </form>
+</aside>
+
+<aside class="drawer" id="optionPanel" role="dialog" aria-modal="true"
+       aria-labelledby="optionPanelTitle" th:classappend="${optionFormOpen} ? ' is-open' : ''">
+    <div class="drawer-header">
+        <div>
+            <h2 id="optionPanelTitle">선택지 추가</h2>
+            <p class="card-subtitle">선택지 코드는 만든 뒤 바꿀 수 없습니다.</p>
+        </div>
+        <button type="button" class="btn-ghost" data-panel-toggle="optionPanel" aria-label="닫기">닫기</button>
+    </div>
+    <form th:action="@{/admin/survey/options}" th:object="${request}" method="post">
+        <div class="drawer-body">
+            <div class="form-section">
+                <div class="form-section-title">대상 문항</div>
+                <div class="toggle-group">
+                    <label class="toggle-option" th:each="question : ${questions}">
+                        <input type="radio" th:field="*{questionKey}" th:value="${question.key}">
+                        <span th:text="${question.key}"></span>
+                    </label>
+                </div>
+                <p class="error" th:if="${#fields.hasErrors('questionKey')}" th:errors="*{questionKey}"></p>
+            </div>
+            <div class="form-section">
+                <div class="form-section-title">선택지 내용</div>
+                <div class="form-grid cols-4">
+                    <div>
+                        <label for="code">코드</label>
+                        <input type="text" id="code" th:field="*{code}" placeholder="FRAGRANCE_ALLERGY" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></p>
+                    </div>
+                    <div>
+                        <label for="label">노출 문구</label>
+                        <input type="text" id="label" th:field="*{label}" placeholder="사용자에게 보일 문구" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('label')}" th:errors="*{label}"></p>
+                    </div>
+                    <div>
+                        <label for="value">점수(0~100, 선택)</label>
+                        <input type="number" id="value" th:field="*{value}" min="0" max="100" placeholder="비워두면 카테고리성">
+                        <p class="error" th:if="${#fields.hasErrors('value')}" th:errors="*{value}"></p>
+                    </div>
+                    <div>
+                        <label for="sortOrder">노출 순서</label>
+                        <input type="number" id="sortOrder" th:field="*{sortOrder}" min="0" placeholder="0">
+                        <p class="error" th:if="${#fields.hasErrors('sortOrder')}" th:errors="*{sortOrder}"></p>
+                    </div>
+                    <div class="span-full">
+                        <span class="field-label">단독 선택</span>
+                        <div class="toggle-group">
+                            <label class="toggle-option">
+                                <input type="checkbox" th:field="*{exclusive}">
+                                <span>다른 항목과 함께 못 고름</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-footer">
+            <button type="button" class="button-secondary" data-panel-toggle="optionPanel">취소</button>
+            <button type="submit" class="btn-primary">선택지 추가</button>
+        </div>
+    </form>
+</aside>
+<script th:src="@{/js/admin.js}"></script>
 </body>
 </html>
