@@ -39,6 +39,7 @@ public class VideoController {
     ) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("videos", service.getVideos());
+            model.addAttribute("registerFormOpen", true);
             return "videos";
         }
 
@@ -49,6 +50,7 @@ public class VideoController {
         } catch (YoutubeAdminException e) {
             bindingResult.rejectValue("url", e.reason().name(), e.reason().userMessage());
             model.addAttribute("videos", service.getVideos());
+            model.addAttribute("registerFormOpen", true);
             return "videos";
         }
     }

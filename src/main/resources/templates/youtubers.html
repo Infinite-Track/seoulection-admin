@@ -15,49 +15,41 @@
                 <h1>유튜버 채널 관리</h1>
                 <p class="description">파이프라인이 주기적으로 확인할 YouTube 채널 링크를 등록합니다.</p>
             </div>
+            <div class="topbar-actions">
+                <button type="button" class="btn-primary" data-panel-toggle="registerPanel" aria-expanded="false" aria-controls="registerPanel">
+                    <span class="btn-icon" aria-hidden="true">＋</span>채널 등록
+                </button>
+            </div>
         </header>
         <main class="content">
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
 
-            <section class="card">
-                <h2>채널 등록</h2>
-                <form th:action="@{/admin/youtubers}" th:object="${request}" method="post">
-                    <div class="form-grid">
-                        <div>
-                            <label for="channelName">채널명</label>
-                            <input id="channelName" th:field="*{channelName}" placeholder="채널명" autocomplete="off">
-                            <p class="error" th:if="${#fields.hasErrors('channelName')}" th:errors="*{channelName}"></p>
-                        </div>
-                        <div class="span-full">
-                            <label for="url">YouTube 채널 링크</label>
-                            <div class="form-row">
-                                <input id="url" th:field="*{url}" placeholder="https://www.youtube.com/@channel" autocomplete="off">
-                            </div>
-                            <p class="error" th:if="${#fields.hasErrors('url')}" th:errors="*{url}"></p>
-                        </div>
-                    </div>
-                    <button type="submit">채널 등록</button>
-                </form>
-            </section>
 
-            <section class="card">
-                <h2>등록된 채널</h2>
-                <table th:if="${!youtubers.isEmpty()}">
-                    <thead><tr><th>채널명</th><th>채널 ID</th><th>URL</th><th>마지막 확인</th></tr></thead>
-                    <tbody>
-                    <tr th:each="youtuber : ${youtubers}">
-                        <td th:text="${youtuber.channelName ?: '파이프라인 확인 전'}"
-                            th:classappend="${youtuber.channelName == null} ? 'pending' : ''"></td>
-                        <td th:text="${youtuber.channelId ?: '파이프라인 확인 전'}"
-                            th:classappend="${youtuber.channelId == null} ? 'pending' : ''"></td>
-                        <td><a th:href="${youtuber.url}" th:text="${youtuber.url}" target="_blank" rel="noopener"></a></td>
-                        <td th:text="${youtuber.lastCheckedAt == null ? '확인 전' : #temporals.format(youtuber.lastCheckedAt, 'yyyy-MM-dd HH:mm')}"></td>
-                    </tr>
-                    </tbody>
-                </table>
+
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div><h2>등록된 채널<span class="count-inline" th:text="${youtubers.size()}"></span></h2></div>
+                </div>
+                <div class="table-scroll" th:if="${!youtubers.isEmpty()}">
+                    <table class="admin-table">
+                        <thead><tr><th>채널명</th><th>채널 ID</th><th>URL</th><th>마지막 확인</th></tr></thead>
+                        <tbody>
+                        <tr th:each="youtuber : ${youtubers}">
+                            <td class="cell-strong" th:text="${youtuber.channelName ?: '파이프라인 확인 전'}"
+                                th:classappend="${youtuber.channelName == null} ? 'pending' : ''"></td>
+                            <td th:classappend="${youtuber.channelId == null} ? 'pending' : ''">
+                                <code th:if="${youtuber.channelId != null}" th:text="${youtuber.channelId}"></code>
+                                <span th:if="${youtuber.channelId == null}">파이프라인 확인 전</span>
+                            </td>
+                            <td class="cell-truncate"><a th:href="${youtuber.url}" th:text="${youtuber.url}" target="_blank" rel="noopener"></a></td>
+                            <td class="cell-nowrap" th:text="${youtuber.lastCheckedAt == null ? '확인 전' : #temporals.format(youtuber.lastCheckedAt, 'yyyy-MM-dd HH:mm')}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
                 <div class="empty" th:if="${youtubers.isEmpty()}">
                     <span class="empty-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="3.5"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="3.5"/><path d="M10.75 9.3v5.4l4.5-2.7z" fill="currentColor" stroke="none"/></svg>
                     </span>
                     <span>등록된 채널이 없습니다.</span>
                 </div>
@@ -65,5 +57,41 @@
         </main>
     </div>
 </div>
+
+<div class="drawer-scrim" data-drawer-scrim></div>
+
+<aside class="drawer" id="registerPanel" role="dialog" aria-modal="true"
+       aria-labelledby="registerPanelTitle" th:classappend="${registerFormOpen} ? ' is-open' : ''">
+    <div class="drawer-header">
+        <div>
+            <h2 id="registerPanelTitle">채널 등록</h2>
+            <p class="card-subtitle">채널 ID와 최근 확인 시각은 파이프라인이 채웁니다.</p>
+        </div>
+        <button type="button" class="btn-ghost" data-panel-toggle="registerPanel" aria-label="닫기">닫기</button>
+    </div>
+    <form th:action="@{/admin/youtubers}" th:object="${request}" method="post">
+        <div class="drawer-body">
+            <div class="form-section">
+                <div class="form-grid cols-2">
+                    <div>
+                        <label for="channelName">채널명</label>
+                        <input id="channelName" th:field="*{channelName}" placeholder="채널명" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('channelName')}" th:errors="*{channelName}"></p>
+                    </div>
+                    <div>
+                        <label for="url">YouTube 채널 링크</label>
+                        <input id="url" th:field="*{url}" placeholder="https://www.youtube.com/@channel" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('url')}" th:errors="*{url}"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-footer">
+            <button type="button" class="button-secondary" data-panel-toggle="registerPanel">취소</button>
+            <button type="submit" class="btn-primary">채널 등록</button>
+        </div>
+    </form>
+</aside>
+<script th:src="@{/js/admin.js}"></script>
 </body>
 </html>
