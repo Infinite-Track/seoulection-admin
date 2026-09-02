@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>제품 검수 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='products')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <nav class="breadcrumb"><a th:href="@{/admin/products}">제품 관리</a><span aria-hidden="true">/</span><span>검수·보완</span></nav>
+                <h1 th:text="${workflowStep == 'ingredients'} ? '전성분 보완' : '식약처 기능성 확인'"></h1>
+            </div>
+            <div class="topbar-actions">
+                <span class="badge is-status" th:classappend="${' badge-' + product.status.tone()}" th:text="${product.status.displayName()}"></span>
+            </div>
+        </header>
+        <main class="content content-narrow">
+            <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+            <!--
+              한 화면에 한 단계만 연다. 성분 보완과 기능성 확인은 근거 자료가 다른 별개의 작업이고,
+              상태 머신도 INGREDIENTS_ADDED를 사이에 두고 두 큐로 나눠 놓았다. 두 폼을 한꺼번에
+              띄우면 그 중간 상태를 아무도 거치지 않아 기능성 확인 큐가 늘 비게 된다.
+            -->
+            <ol class="step-rail">
+                <li th:classappend="${workflowStep == 'ingredients'} ? ' is-current' : ' is-done'"><span>1</span>전성분 확인</li>
+                <li th:classappend="${workflowStep == 'functional'} ? ' is-current' : ''"><span>2</span>식약처 기능성</li>
+            </ol>
+
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2 th:text="${product.name}"></h2>
+                        <p class="card-subtitle" th:text="${product.brand + ' · ' + product.category}"></p>
+                    </div>
+                </div>
+
+                <!-- ── 1단계: 전성분만 ── -->
+                <form th:if="${workflowStep == 'ingredients'}"
+                      th:action="@{'/admin/products/' + ${product.id} + '/workflow/ingredients'}" method="post">
+                    <div class="form-section">
+                        <div class="form-grid">
+                            <div class="span-full">
+                                <span class="field-label">성분 확인 결과</span>
+                                <div class="toggle-group">
+                                    <label class="toggle-option"><input type="radio" name="ingredientResolution" value="FOUND" th:checked="${request.ingredientResolution == 'FOUND'}"><span>성분 확인됨</span></label>
+                                    <label class="toggle-option"><input type="radio" name="ingredientResolution" value="NOT_FOUND" th:checked="${request.ingredientResolution == 'NOT_FOUND'}"><span>성분을 찾지 못함</span></label>
+                                </div>
+                                <p class="form-help">성분 정보를 어디서도 찾지 못한 경우에만 '찾지 못함'을 고르세요 — <code>NOT_FOUND</code>로 저장됩니다.</p>
+                            </div>
+                            <div class="span-full">
+                                <label for="ingredientsText">전성분(INCI)</label>
+                                <textarea id="ingredientsText" name="ingredientsText" rows="8" th:text="${request.ingredientsText}" placeholder="성분을 쉼표 또는 줄바꿈으로 입력하세요."></textarea>
+                                <p class="form-help">성분을 입력하거나, 못 찾았으면 위에서 '찾지 못함'을 고르세요. 빈 채로는 저장되지 않습니다. 저장하면 기능성 확인 단계로 넘어갑니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-footer">
+                        <a class="button-secondary" th:href="@{/admin/products(stage='ingredient-review')}">취소</a>
+                        <button type="submit" class="btn-primary">전성분 저장</button>
+                    </div>
+                </form>
+
+                <!-- ── 2단계: 기능성만. 성분은 읽기 전용으로 근거만 보여 준다. ── -->
+                <div th:if="${workflowStep == 'functional'}">
+                    <div class="form-section readonly-section">
+                        <div class="form-section-title">
+                            전성분<span class="optional-mark">확인됨</span>
+                            <a class="text-link" th:href="@{'/admin/products/' + ${product.id} + '/workflow'(step='ingredients')}">성분 수정</a>
+                        </div>
+                        <div class="chip-list" th:if="${product.ingredients != null && !product.ingredients.isEmpty()}">
+                            <span class="data-chip is-neutral" th:each="ingredient : ${product.ingredients}" th:text="${ingredient}"></span>
+                        </div>
+                        <p class="pending" th:unless="${product.ingredients != null && !product.ingredients.isEmpty()}">등록된 성분이 없습니다.</p>
+                    </div>
+                    <form th:action="@{'/admin/products/' + ${product.id} + '/workflow/functions'}" method="post">
+                        <div class="form-section">
+                            <div class="form-grid">
+                                <div class="span-full">
+                                    <span class="field-label">의약품안전나라 조회 결과</span>
+                                    <div class="toggle-group">
+                                        <label class="toggle-option"><input type="radio" name="functionResult" value="NONE" required th:checked="${request.functionResult == 'NONE'}"><span>기능성 아님</span></label>
+                                        <label class="toggle-option"><input type="radio" name="functionResult" value="CONFIRMED" required th:checked="${request.functionResult == 'CONFIRMED'}"><span>기능성 확인</span></label>
+                                    </div>
+                                    <p class="form-help">둘 중 하나를 반드시 고르세요. 기본값을 두지 않는 이유는, 확인 없이 저장했을 때 '기능성 아님'이 사실로 기록되면 안 되기 때문입니다. 저장하면 어느 쪽이든 상태가 다음 단계로 넘어갑니다.</p>
+                                </div>
+                                <div class="span-full">
+                                    <span class="field-label">확인된 기능성 유형</span>
+                                    <div class="toggle-group">
+                                        <label class="toggle-option"><input type="checkbox" name="function" value="WHITENING" th:checked="${#lists.contains(request.function, 'WHITENING')}"><span>미백</span></label>
+                                        <label class="toggle-option"><input type="checkbox" name="function" value="WRINKLE_IMPROVEMENT" th:checked="${#lists.contains(request.function, 'WRINKLE_IMPROVEMENT')}"><span>주름 개선</span></label>
+                                        <label class="toggle-option"><input type="checkbox" name="function" value="UV_PROTECTION" th:checked="${#lists.contains(request.function, 'UV_PROTECTION')}"><span>자외선 차단</span></label>
+                                        <label class="toggle-option"><input type="checkbox" name="function" value="ACNE_RELIEF" th:checked="${#lists.contains(request.function, 'ACNE_RELIEF')}"><span>여드름성 피부 완화</span></label>
+                                        <label class="toggle-option"><input type="checkbox" name="function" value="SKIN_BARRIER_RECOVERY" th:checked="${#lists.contains(request.function, 'SKIN_BARRIER_RECOVERY')}"><span>피부장벽 기능 회복</span></label>
+                                        <label class="toggle-option"><input type="checkbox" name="function" value="STRETCH_MARKS" th:checked="${#lists.contains(request.function, 'STRETCH_MARKS')}"><span>튼살 완화</span></label>
+                                    </div>
+                                    <p class="form-help">기능성 확인을 선택한 경우에만 유형을 선택하세요. 저장하면 상태가 <code>READY_FOR_INCIAPI</code>로 바뀌어 파이프라인으로 넘어갑니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-footer">
+                            <a class="button-secondary" th:href="@{/admin/products(stage='functional-review')}">취소</a>
+                            <button type="submit" class="btn-primary">기능성 정보 저장</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+<script>
+    (() => {
+        // 1단계: 성분을 못 찾았다면 성분란은 잠근다.
+        const ingredients = document.querySelector('#ingredientsText');
+        if (ingredients) {
+            const syncResolution = () => {
+                const notFound = document.querySelector('input[name="ingredientResolution"]:checked')?.value === 'NOT_FOUND';
+                ingredients.disabled = notFound;
+                if (notFound) ingredients.value = '';
+            };
+            document.querySelectorAll('input[name="ingredientResolution"]')
+                .forEach(input => input.addEventListener('change', syncResolution));
+            syncResolution();
+        }
+
+        // 2단계: 기능성 유형은 '기능성 확인'을 골랐을 때만 의미가 있다.
+        const statusInputs = document.querySelectorAll('input[name="functionResult"]');
+        if (statusInputs.length) {
+            const categoryInputs = document.querySelectorAll('input[name="function"]');
+            const syncFunctional = () => {
+                const confirmed = document.querySelector('input[name="functionResult"]:checked')?.value === 'CONFIRMED';
+                categoryInputs.forEach(input => {
+                    input.disabled = !confirmed;
+                    if (!confirmed) input.checked = false;
+                });
+            };
+            statusInputs.forEach(input => input.addEventListener('change', syncFunctional));
+            syncFunctional();
+        }
+    })();
+</script>
+</body>
+</html>
