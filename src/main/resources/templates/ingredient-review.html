@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>성분 검수 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='ingredients')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <nav class="breadcrumb"><a th:href="@{/admin/ingredients}">성분 관리</a><span aria-hidden="true">/</span><span>검수·보완</span></nav>
+                <h1>성분 검수·보완</h1>
+            </div>
+        </header>
+        <main class="content content-narrow">
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2 th:text="${ingredient.displayNameKo}"></h2>
+                        <p class="card-subtitle" th:text="${ingredient.inciName}"></p>
+                    </div>
+                </div>
+                <form th:action="@{'/admin/ingredients/' + ${ingredient.id} + '/review'}" th:object="${request}" method="post">
+                    <div class="form-section">
+                        <div class="form-section-title">성분 이름<span class="required-mark">필수</span></div>
+                        <div class="form-grid cols-2">
+                            <div>
+                                <label for="canonicalName">표준 성분명</label>
+                                <input id="canonicalName" th:field="*{canonicalName}">
+                                <p class="error" th:if="${#fields.hasErrors('canonicalName')}" th:errors="*{canonicalName}"></p>
+                            </div>
+                            <div>
+                                <label for="inciName">INCI명</label>
+                                <input id="inciName" th:field="*{inciName}">
+                                <p class="error" th:if="${#fields.hasErrors('inciName')}" th:errors="*{inciName}"></p>
+                            </div>
+                            <div>
+                                <label for="displayNameKo">한글명</label>
+                                <input id="displayNameKo" th:field="*{displayNameKo}">
+                                <p class="error" th:if="${#fields.hasErrors('displayNameKo')}" th:errors="*{displayNameKo}"></p>
+                            </div>
+                            <div>
+                                <label for="family">성분 계열</label>
+                                <input id="family" th:field="*{family}">
+                                <p class="error" th:if="${#fields.hasErrors('family')}" th:errors="*{family}"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <div class="form-section-title">검색·추천</div>
+                        <div class="form-grid">
+                            <div class="span-full">
+                                <label for="aliasesText">별칭</label>
+                                <textarea id="aliasesText" th:field="*{aliasesText}" rows="3" placeholder="쉼표 또는 줄바꿈"></textarea>
+                            </div>
+                            <div class="span-full">
+                                <label for="searchGroupsText">검색 그룹</label>
+                                <textarea id="searchGroupsText" th:field="*{searchGroupsText}" rows="2" placeholder="쉼표 또는 줄바꿈"></textarea>
+                            </div>
+                            <div class="span-full">
+                                <label for="effectsText">추천 지표·역할</label>
+                                <textarea id="effectsText" th:field="*{effectsText}" rows="4" placeholder="WRINKLE_SCORE=CORE, WATER_SCORE=SUPPORT"></textarea>
+                                <p class="form-help">제품의 식약처 기능성 심사 여부가 아니라, 성분과 피부 지표의 추천 연결입니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-footer">
+                        <a class="button-secondary" th:href="@{/admin/ingredients}">취소</a>
+                        <button type="submit" class="btn-primary">검수 정보 저장</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>

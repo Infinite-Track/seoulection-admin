@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>성분 관리 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='ingredients')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <h1>성분 관리</h1>
+                <p class="description">성분의 계열·검색 그룹·추천 지표를 관리합니다.</p>
+            </div>
+            <div class="topbar-actions">
+                <button type="button" class="btn-primary" data-panel-toggle="registerPanel" aria-expanded="false" aria-controls="registerPanel">
+                    <span class="btn-icon" aria-hidden="true">＋</span>성분 추가
+                </button>
+            </div>
+        </header>
+        <main class="content">
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+
+
+
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2>등록된 성분<span class="count-inline" th:text="${ingredients.size()}"></span></h2>
+                        <p class="card-subtitle">초기 15개 데이터는 MongoDB가 비어 있을 때 자동 생성됩니다.</p>
+                    </div>
+                </div>
+                <div class="table-scroll">
+                    <table class="admin-table ingredient-table">
+                        <thead><tr><th>성분</th><th>성분 계열</th><th>검색 그룹</th><th>추천 지표</th><th>관리</th></tr></thead>
+                        <tbody>
+                        <tr th:each="ingredient : ${ingredients}">
+                            <td>
+                                <div class="data-display">
+                                    <strong th:text="${ingredient.displayNameKo}"></strong>
+                                    <small th:text="${ingredient.inciName}"></small>
+                                </div>
+                            </td>
+                            <td><span class="data-chip is-neutral" th:text="${ingredient.family}"></span></td>
+                            <td>
+                                <div class="chip-list">
+                                    <span class="data-chip" th:each="group : ${ingredient.searchGroups}" th:text="${group}"></span>
+                                    <span class="pending" th:if="${ingredient.searchGroups.isEmpty()}">미지정</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="chip-list">
+                                    <span class="data-chip is-core" th:if="${effect.value == 'CORE'}" th:each="effect : ${ingredient.effects.entrySet()}" th:text="${'핵심 · ' + effect.key}"></span>
+                                    <span class="data-chip is-support" th:if="${effect.value != 'CORE'}" th:each="effect : ${ingredient.effects.entrySet()}" th:text="${'보조 · ' + effect.key}"></span>
+                                    <span class="pending" th:if="${ingredient.effects.isEmpty()}">미지정</span>
+                                </div>
+                            </td>
+                            <td class="admin-actions">
+                                <a class="text-link" th:href="@{'/admin/ingredients/' + ${ingredient.id} + '/review'}">검수·보완</a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<div class="drawer-scrim" data-drawer-scrim></div>
+
+<aside class="drawer" id="registerPanel" role="dialog" aria-modal="true"
+       aria-labelledby="registerPanelTitle" th:classappend="${registerFormOpen} ? ' is-open' : ''">
+    <div class="drawer-header">
+        <div>
+            <h2 id="registerPanelTitle">성분 추가</h2>
+            <p class="card-subtitle">추천 지표는 <code>TARGET=ROLE</code> 형식으로 입력합니다. 예) <code>WATER_SCORE=CORE</code></p>
+        </div>
+        <button type="button" class="btn-ghost" data-panel-toggle="registerPanel" aria-label="닫기">닫기</button>
+    </div>
+    <form th:action="@{/admin/ingredients}" th:object="${request}" method="post">
+        <div class="drawer-body">
+            <div class="form-section">
+                <div class="form-section-title">성분 이름<span class="required-mark">필수</span></div>
+                <div class="form-grid">
+                    <div>
+                        <label for="canonicalName">표준 성분명</label>
+                        <input id="canonicalName" th:field="*{canonicalName}" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('canonicalName')}" th:errors="*{canonicalName}"></p>
+                    </div>
+                    <div>
+                        <label for="inciName">INCI명</label>
+                        <input id="inciName" th:field="*{inciName}" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('inciName')}" th:errors="*{inciName}"></p>
+                    </div>
+                    <div>
+                        <label for="displayNameKo">한글명</label>
+                        <input id="displayNameKo" th:field="*{displayNameKo}" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('displayNameKo')}" th:errors="*{displayNameKo}"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <div class="form-section-title">분류·검색</div>
+                <div class="form-grid">
+                    <div>
+                        <label for="family">성분 계열</label>
+                        <input id="family" th:field="*{family}" placeholder="예) RETINOID" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('family')}" th:errors="*{family}"></p>
+                    </div>
+                    <div>
+                        <label for="aliasesText">별칭</label>
+                        <input id="aliasesText" th:field="*{aliasesText}" placeholder="쉼표 또는 줄바꿈" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="searchGroupsText">검색 그룹</label>
+                        <input id="searchGroupsText" th:field="*{searchGroupsText}" placeholder="쉼표 또는 줄바꿈" autocomplete="off">
+                    </div>
+                    <div class="span-full">
+                        <label for="effectsText">추천 지표</label>
+                        <input id="effectsText" th:field="*{effectsText}" placeholder="WRINKLE_SCORE=SUPPORT, WATER_SCORE=CORE" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-footer">
+            <button type="button" class="button-secondary" data-panel-toggle="registerPanel">취소</button>
+            <button type="submit" class="btn-primary">성분 등록</button>
+        </div>
+    </form>
+</aside>
+<script th:src="@{/js/admin.js}"></script>
+</body>
+</html>
