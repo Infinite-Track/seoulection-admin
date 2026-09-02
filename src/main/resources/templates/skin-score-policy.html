@@ -10,8 +10,12 @@
 <div class="shell">
     <aside th:replace="~{fragments/sidebar :: nav(active='skin-score-policy')}"></aside>
     <div class="shell-main">
-        <header class="topbar"><div><h1>피부 점수 정책</h1>
-            <p class="description">항목별 점수 원천과 피부 상태 판정 경계를 관리합니다.</p></div></header>
+        <header class="topbar">
+            <div>
+                <h1>피부 점수 정책</h1>
+                <p class="description">항목별 점수 원천과 피부 상태 판정 경계를 관리합니다.</p>
+            </div>
+        </header>
         <main class="content">
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
             <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -20,24 +24,39 @@
                 점수가 Bad 경계 이하이면 BAD, Good 경계 이상이면 GOOD, 사이는 OKAY로 판정합니다.
                 경계 변경은 새 피부 결과 조회와 추천에 즉시 반영됩니다.
             </p>
-            <section class="card">
-                <table>
-                    <thead><tr><th>피부 항목</th><th>점수 원천</th><th>Bad 경계</th><th>Good 경계</th><th>정책 버전</th><th></th></tr></thead>
-                    <tbody>
-                    <tr th:each="policy : ${policies}">
-                        <td><strong th:text="${policy.label}"></strong><br><code th:text="${policy.featureKey}"></code></td>
-                        <td colspan="5">
-                            <form class="policy-form" th:action="@{'/admin/skin-score-policy/' + ${policy.featureKey}}" method="post">
-                                <strong th:text="${policy.surveyReliability > policy.photoReliability ? '설문 100%' : '사진 100%'}"></strong>
-                                <input type="number" name="badBoundary" th:value="${policy.badBoundary}" min="0" max="1" step="0.001" required>
-                                <input type="number" name="goodBoundary" th:value="${policy.goodBoundary}" min="0" max="1" step="0.001" required>
-                                <input type="text" name="policyVersion" th:value="${policy.policyVersion}" maxlength="32" required>
-                                <button class="subtle" type="submit">저장</button>
-                            </form>
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2>항목별 판정 경계<span class="count-inline" th:text="${policies.size()}"></span></h2>
+                        <p class="card-subtitle">행마다 따로 저장됩니다.</p>
+                    </div>
+                </div>
+                <div class="table-scroll">
+                    <table class="admin-table policy-table">
+                        <thead>
+                        <tr><th>피부 항목</th><th>점수 원천</th><th>Bad 경계</th><th>Good 경계</th><th>정책 버전</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="policy : ${policies}">
+                            <td>
+                                <div class="data-display">
+                                    <strong th:text="${policy.label}"></strong>
+                                    <small><code th:text="${policy.featureKey}"></code></small>
+                                </div>
+                            </td>
+                            <td colspan="5">
+                                <form class="policy-form" th:action="@{'/admin/skin-score-policy/' + ${policy.featureKey}}" method="post">
+                                    <span class="data-chip is-neutral" th:text="${policy.surveyReliability > policy.photoReliability ? '설문 100%' : '사진 100%'}"></span>
+                                    <input type="number" name="badBoundary" th:value="${policy.badBoundary}" min="0" max="1" step="0.001" required aria-label="Bad 경계">
+                                    <input type="number" name="goodBoundary" th:value="${policy.goodBoundary}" min="0" max="1" step="0.001" required aria-label="Good 경계">
+                                    <input type="text" name="policyVersion" th:value="${policy.policyVersion}" maxlength="32" required aria-label="정책 버전">
+                                    <button class="subtle" type="submit">저장</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
         </main>
     </div>
