@@ -30,12 +30,12 @@
                 <div class="panel-header">
                     <div>
                         <h2>등록된 성분<span class="count-inline" th:text="${ingredients.size()}"></span></h2>
-                        <p class="card-subtitle">초기 15개 데이터는 MongoDB가 비어 있을 때 자동 생성됩니다.</p>
+                <p class="card-subtitle">성분 기본 정보와 효능·근거 데이터는 PostgreSQL 성분 사전에서 관리됩니다.</p>
                     </div>
                 </div>
                 <div class="table-scroll">
                     <table class="admin-table ingredient-table">
-                        <thead><tr><th>성분</th><th>성분 계열</th><th>검색 그룹</th><th>추천 지표</th><th>관리</th></tr></thead>
+                        <thead><tr><th>성분</th><th>성분 계열</th><th>추천 지표</th><th>관리</th></tr></thead>
                         <tbody>
                         <tr th:each="ingredient : ${ingredients}">
                             <td>
@@ -47,15 +47,12 @@
                             <td><span class="data-chip is-neutral" th:text="${ingredient.family}"></span></td>
                             <td>
                                 <div class="chip-list">
-                                    <span class="data-chip" th:each="group : ${ingredient.searchGroups}" th:text="${group}"></span>
-                                    <span class="pending" th:if="${ingredient.searchGroups.isEmpty()}">미지정</span>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="chip-list">
                                     <span class="data-chip is-core" th:if="${effect.value == 'CORE'}" th:each="effect : ${ingredient.effects.entrySet()}" th:text="${'핵심 · ' + effect.key}"></span>
                                     <span class="data-chip is-support" th:if="${effect.value != 'CORE'}" th:each="effect : ${ingredient.effects.entrySet()}" th:text="${'보조 · ' + effect.key}"></span>
                                     <span class="pending" th:if="${ingredient.effects.isEmpty()}">미지정</span>
+                                    <span class="data-chip is-neutral" th:each="property : ${ingredient.properties.entrySet()}" th:text="${property.key + ' · ' + property.value}"></span>
+                                    <span class="pending" th:if="${!ingredient.evidences.isEmpty()}" th:text="${'근거 ' + ingredient.evidences.size() + '건'}"></span>
+                                    <span class="pending" th:if="${!ingredient.efficacyRanges.isEmpty()}" th:text="${'효능 범위 ' + ingredient.efficacyRanges.size() + '건'}"></span>
                                 </div>
                             </td>
                             <td class="admin-actions">
@@ -87,11 +84,6 @@
                 <div class="form-section-title">성분 이름<span class="required-mark">필수</span></div>
                 <div class="form-grid">
                     <div>
-                        <label for="canonicalName">표준 성분명</label>
-                        <input id="canonicalName" th:field="*{canonicalName}" autocomplete="off">
-                        <p class="error" th:if="${#fields.hasErrors('canonicalName')}" th:errors="*{canonicalName}"></p>
-                    </div>
-                    <div>
                         <label for="inciName">INCI명</label>
                         <input id="inciName" th:field="*{inciName}" autocomplete="off">
                         <p class="error" th:if="${#fields.hasErrors('inciName')}" th:errors="*{inciName}"></p>
@@ -115,13 +107,29 @@
                         <label for="aliasesText">별칭</label>
                         <input id="aliasesText" th:field="*{aliasesText}" placeholder="쉼표 또는 줄바꿈" autocomplete="off">
                     </div>
-                    <div>
-                        <label for="searchGroupsText">검색 그룹</label>
-                        <input id="searchGroupsText" th:field="*{searchGroupsText}" placeholder="쉼표 또는 줄바꿈" autocomplete="off">
-                    </div>
                     <div class="span-full">
                         <label for="effectsText">추천 지표</label>
                         <input id="effectsText" th:field="*{effectsText}" placeholder="WRINKLE_SCORE=SUPPORT, WATER_SCORE=CORE" autocomplete="off">
+                    </div>
+                    <div class="span-full">
+                        <label for="propertiesText">특성</label>
+                        <input type="hidden" id="propertiesText" th:field="*{propertiesText}">
+                        <div class="toggle-group property-toggle-group">
+                            <label class="toggle-option" th:each="definition : ${propertyDefinitions}">
+                                <input type="checkbox" data-property-toggle th:attr="data-property-key=${definition.propertyKey}">
+                                <span th:text="${definition.displayNameKo + ' (' + definition.propertyKey + ')'}"></span>
+                            </label>
+                        </div>
+                        <p class="form-help">특성 종류는 위 토글에서 선택하고, 선택한 특성의 값만 입력합니다.</p>
+                        <div class="property-value-list" data-property-values></div>
+                    </div>
+                    <div class="span-full">
+                        <label for="evidenceText">근거</label>
+                        <textarea id="evidenceText" th:field="*{evidenceText}" rows="3" placeholder="SOURCE_TYPE|제목|URL|human(true/false)|evidence_level|target|specific(true/false)|form|농도|단위|요약"></textarea>
+                    </div>
+                    <div class="span-full">
+                        <label for="efficacyRangesText">효능 범위</label>
+                        <textarea id="efficacyRangesText" th:field="*{efficacyRangesText}" rows="3" placeholder="TARGET|제품유형|min|max|단위|효과시작농도|자극농도|근거ID|비고"></textarea>
                     </div>
                 </div>
             </div>
@@ -133,5 +141,20 @@
     </form>
 </aside>
 <script th:src="@{/js/admin.js}"></script>
+<script>
+    document.querySelectorAll('[data-property-toggle]').forEach(function (toggle) {
+        toggle.addEventListener('change', function () {
+            var key = toggle.dataset.propertyKey;
+            var values = document.querySelector('[data-property-values]');
+            var existing = values.querySelector('[data-property-value="' + key + '"]');
+            if (toggle.checked && !existing) {
+                var input = document.createElement('input'); input.type = 'text'; input.dataset.propertyValue = key;
+                input.placeholder = key + ' 값'; input.addEventListener('input', syncProperties); values.appendChild(input);
+            } else if (!toggle.checked && existing) existing.remove();
+            syncProperties();
+        });
+    });
+    function syncProperties() { document.getElementById('propertiesText').value = Array.from(document.querySelectorAll('[data-property-value]')).map(function (i) { return i.dataset.propertyValue + '=' + i.value; }).join(', '); }
+</script>
 </body>
 </html>

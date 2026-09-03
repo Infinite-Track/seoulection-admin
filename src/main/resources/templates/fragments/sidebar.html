@@ -47,6 +47,10 @@
             <span class="nav-icon"><span style="font-size:16px">✦</span></span>
             <span>성분</span>
         </a>
+        <a class="nav-item" th:classappend="${active == 'ingredient-properties'} ? 'is-active' : ''" th:href="@{/admin/ingredient-properties}">
+            <span class="nav-icon"><span style="font-size:16px">⚙</span></span>
+            <span>성분 특성 정의</span>
+        </a>
         <a class="nav-item" th:classappend="${active == 'survey'} ? 'is-active' : ''" th:href="@{/admin/survey}">
             <span class="nav-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z"/><path d="M9 12.5h6M9 16h6M9 9h2.5"/></svg>

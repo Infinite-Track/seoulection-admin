@@ -29,11 +29,6 @@
                         <div class="form-section-title">성분 이름<span class="required-mark">필수</span></div>
                         <div class="form-grid cols-2">
                             <div>
-                                <label for="canonicalName">표준 성분명</label>
-                                <input id="canonicalName" th:field="*{canonicalName}">
-                                <p class="error" th:if="${#fields.hasErrors('canonicalName')}" th:errors="*{canonicalName}"></p>
-                            </div>
-                            <div>
                                 <label for="inciName">INCI명</label>
                                 <input id="inciName" th:field="*{inciName}">
                                 <p class="error" th:if="${#fields.hasErrors('inciName')}" th:errors="*{inciName}"></p>
@@ -58,13 +53,90 @@
                                 <textarea id="aliasesText" th:field="*{aliasesText}" rows="3" placeholder="쉼표 또는 줄바꿈"></textarea>
                             </div>
                             <div class="span-full">
-                                <label for="searchGroupsText">검색 그룹</label>
-                                <textarea id="searchGroupsText" th:field="*{searchGroupsText}" rows="2" placeholder="쉼표 또는 줄바꿈"></textarea>
-                            </div>
-                            <div class="span-full">
                                 <label for="effectsText">추천 지표·역할</label>
                                 <textarea id="effectsText" th:field="*{effectsText}" rows="4" placeholder="WRINKLE_SCORE=CORE, WATER_SCORE=SUPPORT"></textarea>
                                 <p class="form-help">제품의 식약처 기능성 심사 여부가 아니라, 성분과 피부 지표의 추천 연결입니다.</p>
+                            </div>
+                            <div class="span-full">
+                                <label for="propertiesText">특성</label>
+                                <input type="hidden" id="propertiesText" th:field="*{propertiesText}">
+                                <div class="toggle-group property-toggle-group">
+                                    <label class="toggle-option" th:each="definition : ${propertyDefinitions}">
+                                        <input type="checkbox" data-property-toggle th:attr="data-property-key=${definition.propertyKey}" th:checked="${ingredient.properties.containsKey(definition.propertyKey)}">
+                                        <span th:text="${definition.displayNameKo + ' (' + definition.propertyKey + ')'}"></span>
+                                    </label>
+                                </div>
+                                <p class="form-help">특성 종류는 토글로 선택하고 값을 입력합니다.</p>
+                                <div class="property-value-list" data-property-values>
+                                    <input th:each="property : ${ingredient.properties.entrySet()}" type="text" th:attr="data-property-value=${property.key}" th:value="${property.value}" th:placeholder="${property.key + ' 값'}">
+                                </div>
+                            </div>
+                            <div class="span-full">
+                                <div class="section-heading-row">
+                                    <div>
+                                        <label>연구 근거</label>
+                                        <p class="form-help">evidence_source와 ingredient_evidence를 연결해 저장한 연구 목록입니다. 연구 조건은 ingredient_evidence_parameter에서 관리합니다.</p>
+                                    </div>
+                                    <span class="data-chip is-neutral" th:text="${ingredient.evidences.size() + '건'}"></span>
+                                </div>
+                                <div class="table-scroll" th:if="${!ingredient.evidences.isEmpty()}">
+                                    <table class="admin-table detail-table">
+                                        <thead><tr><th>출처</th><th>연구 수준</th><th>대상·성분</th><th>연구 조건</th><th>링크</th></tr></thead>
+                                        <tbody>
+                                        <tr th:each="evidence : ${ingredient.evidences}">
+                                            <td><strong th:text="${evidence.title}"></strong><small th:text="${evidence.sourceType}"></small></td>
+                                            <td><span class="data-chip is-neutral" th:text="${evidence.evidenceLevel}"></span><small th:text="${evidence.humanEvidence ? '사람 대상' : '비임상/기타'}"></small></td>
+                                            <td><span th:text="${evidence.targetScore}"></span><small th:text="${evidence.ingredientSpecific ? '성분 자체 연구' : '혼합/간접 연구'}"></small></td>
+                                            <td><span th:text="${evidence.productForm != null ? '제형: ' + evidence.productForm : '제형 미기재'}"></span><small th:if="${evidence.studyConcentration != null}" th:text="${'농도: ' + evidence.studyConcentration + ' ' + evidence.studyConcentrationUnit}"></small></td>
+                                            <td><a class="text-link" th:if="${evidence.url != null and !evidence.url.isBlank()}" th:href="${evidence.url}" target="_blank" rel="noopener">원문 열기</a><span th:unless="${evidence.url != null and !evidence.url.isBlank()}" class="pending">없음</span></td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="empty-state" th:if="${ingredient.evidences.isEmpty()}">등록된 연구 근거가 없습니다.</p>
+                            </div>
+                            <div class="span-full">
+                                <div class="section-heading-row">
+                                    <div>
+                                        <label>효능 프로필</label>
+                                        <p class="form-help">ingredient_efficacy_profile에 저장된 서비스용 종합 판단입니다. 조건은 profile condition, 근거는 profile evidence로 연결됩니다.</p>
+                                    </div>
+                                    <span class="data-chip is-neutral" th:text="${ingredient.efficacyRanges.size() + '건'}"></span>
+                                </div>
+                                <div class="table-scroll" th:if="${!ingredient.efficacyRanges.isEmpty()}">
+                                    <table class="admin-table detail-table efficacy-table">
+                                        <thead><tr><th>대상 지표</th><th>제형</th><th>종합 농도 범위</th><th>추가 조건</th><th>효과 시작</th><th>자극 가능성</th><th>연결 근거</th><th>메모</th></tr></thead>
+                                        <tbody>
+                                        <tr th:each="profile : ${ingredient.efficacyRanges}">
+                                            <td><span class="data-chip" th:classappend="${profile.role == 'CORE' ? ' is-core' : (profile.role == 'LIMITED' ? ' is-alert' : ' is-support')}" th:text="${(profile.role != null ? profile.role : 'SUPPORT') + ' · ' + profile.targetKey}"></span></td>
+                                            <td th:text="${profile.productType != null ? profile.productType : '전체 제형'}"></td>
+                                            <td th:text="${profile.concentrationMin != null or profile.concentrationMax != null ? (profile.concentrationMin != null ? profile.concentrationMin : '—') + ' ~ ' + (profile.concentrationMax != null ? profile.concentrationMax : '—') + ' ' + (profile.concentrationUnit != null ? profile.concentrationUnit : '') : '미정'}"></td>
+                                            <td><div class="condition-list" th:if="${!profile.conditions.isEmpty()}"><div class="condition-item" th:each="condition : ${profile.conditions}"><span class="data-chip is-neutral" th:text="${condition.parameterKey}"></span><span th:text="${condition.valueText != null ? condition.valueText : (condition.valueMin != null ? condition.valueMin : '—') + ' ~ ' + (condition.valueMax != null ? condition.valueMax : '—') + ' ' + (condition.valueUnit != null ? condition.valueUnit : '')}"></span><small th:text="${condition.conditionMode + (condition.interpolationAllowed ? ' · 보간 허용' : ' · 보간 안 함')}"></small></div></div><span th:if="${profile.conditions.isEmpty()}" class="pending">없음</span></td>
+                                            <td th:text="${profile.onsetConcentration != null ? profile.onsetConcentration + ' ' + profile.concentrationUnit : '미정'}"></td>
+                                            <td th:text="${profile.irritationConcentration != null ? profile.irritationConcentration + ' ' + profile.concentrationUnit : '미정'}"></td>
+                                            <td th:text="${profile.evidenceId != null ? '#' + profile.evidenceId : '미연결'}"></td>
+                                            <td class="cell-truncate" th:text="${profile.notes != null ? profile.notes : '—'}"></td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="empty-state" th:if="${ingredient.efficacyRanges.isEmpty()}">등록된 효능 프로필이 없습니다.</p>
+                            </div>
+                            <div class="span-full advanced-editor">
+                                <details>
+                                    <summary>고급 일괄 입력·수정</summary>
+                                    <div class="advanced-editor-body">
+                                        <label for="evidenceText">연구 근거 원본 입력</label>
+                                        <textarea id="evidenceText" th:field="*{evidenceText}" rows="4" placeholder="SOURCE_TYPE|제목|URL|human|evidence_level|target|specific|form|농도|단위|요약"></textarea>
+                                        <p class="form-help">한 줄에 근거 1건씩 입력합니다. 저장 시 evidence_source, ingredient_evidence, ingredient_evidence_parameter로 분리됩니다.</p>
+                                        <label for="efficacyRangesText">효능 프로필 원본 입력</label>
+                                        <textarea id="efficacyRangesText" th:field="*{efficacyRangesText}" rows="4" placeholder="TARGET|제품유형|min|max|단위|효과시작농도|자극농도|근거ID|비고"></textarea>
+                                        <p class="form-help">저장 시 ingredient_efficacy_profile과 연결 테이블로 분리됩니다. 농도는 프로필 본문에, 분자량·순도·제형 등은 아래 조건 행에 저장합니다.</p>
+                                        <label for="efficacyConditionsText">프로필 조건 입력</label>
+                                        <textarea id="efficacyConditionsText" th:field="*{efficacyConditionsText}" rows="5" placeholder="TARGET|조건 유형|최솟값|최댓값|단위|문자값|조건 모드|보간 허용&#10;예: WATER_SCORE|MOLECULAR_WEIGHT|||kDa|50, 130|DISCRETE_VALUES|false&#10;예: SENSITIVITY_SCORE|PURITY|95|99|%||CONTINUOUS_RANGE|true"></textarea>
+                                        <p class="form-help">조건 유형: CONCENTRATION, MOLECULAR_WEIGHT, PURITY, FORM, STABILITY. 조건 모드: EXACT_VALUE, DISCRETE_VALUES, CONTINUOUS_RANGE, UPPER_BOUND, LOWER_BOUND. 저장 시 ingredient_efficacy_profile_condition에 저장됩니다.</p>
+                                    </div>
+                                </details>
                             </div>
                         </div>
                     </div>
@@ -78,4 +150,17 @@
     </div>
 </div>
 </body>
+<script>
+    document.querySelectorAll('[data-property-toggle]').forEach(function (toggle) {
+        toggle.addEventListener('change', function () {
+            var key = toggle.dataset.propertyKey, values = document.querySelector('[data-property-values]');
+            var existing = values.querySelector('[data-property-value="' + key + '"]');
+            if (toggle.checked && !existing) { var input = document.createElement('input'); input.type = 'text'; input.dataset.propertyValue = key; input.placeholder = key + ' 값'; input.addEventListener('input', syncProperties); values.appendChild(input); }
+            else if (!toggle.checked && existing) existing.remove();
+            syncProperties();
+        });
+    });
+    function syncProperties() { document.getElementById('propertiesText').value = Array.from(document.querySelectorAll('[data-property-value]')).map(function (i) { return i.dataset.propertyValue + '=' + i.value; }).join(', '); }
+    syncProperties();
+</script>
 </html>

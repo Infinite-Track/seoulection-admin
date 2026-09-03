@@ -279,6 +279,41 @@ textarea {
 
 textarea:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft-strong); }
 .form-help { margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+
+.section-heading-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+
+.section-heading-row label { margin-bottom: 0; }
+.section-heading-row .form-help { margin: 5px 0 0; }
+.detail-table { min-width: 760px; table-layout: auto; }
+.detail-table th, .detail-table td { padding-top: 12px; padding-bottom: 12px; line-height: 1.5; white-space: normal; word-break: keep-all; }
+.detail-table td small { display: block; margin-top: 4px; color: var(--text-secondary); font-size: 11px; }
+.detail-table th:nth-child(1) { width: 23%; }
+.detail-table th:nth-child(2) { width: 15%; }
+.detail-table th:nth-child(3) { width: 17%; }
+.detail-table th:nth-child(4) { width: 20%; }
+.efficacy-table { min-width: 1180px; }
+.efficacy-table th:nth-child(1) { width: 16%; }
+.efficacy-table th:nth-child(2) { width: 14%; }
+.efficacy-table th:nth-child(3) { width: 18%; }
+.efficacy-table th:nth-child(4), .efficacy-table th:nth-child(5) { width: 13%; }
+.efficacy-table th:nth-child(6) { width: 12%; }
+.empty-state { padding: 18px 0; color: var(--text-secondary); font-size: 13px; }
+.condition-list { display: grid; gap: 10px; }
+.condition-item { display: block; font-size: 12px; line-height: 1.45; }
+.condition-item .data-chip { display: inline-flex; margin-bottom: 4px; }
+.condition-item > span:not(.data-chip) { display: block; }
+.condition-item small { width: 100%; margin: 0 !important; font-size: 10.5px !important; }
+.advanced-editor { margin-top: 8px; }
+.advanced-editor details { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-sunken); }
+.advanced-editor summary { padding: 12px 14px; cursor: pointer; color: var(--text-secondary); font-size: 13px; font-weight: 700; }
+.advanced-editor-body { display: grid; gap: 8px; padding: 0 14px 14px; }
+.advanced-editor-body label { margin-top: 8px; }
 .inline-review-form { min-width: 320px; padding: 12px 0; }
 .inline-review-form label { margin-top: 9px; }
 .text-link { color: var(--accent); font-size: 12px; font-weight: 700; text-decoration: none; }
@@ -774,6 +809,9 @@ body.is-drawer-open { overflow: hidden; }
     color: var(--text-tertiary);
     cursor: not-allowed;
 }
+.property-toggle-group { margin-top: 8px; }
+.property-value-list { display: grid; gap: 8px; margin-top: 10px; }
+.property-value-list input { max-width: 420px; }
 
 .error { margin: 7px 0 0; color: var(--danger); font-size: 13px; }
 
@@ -848,6 +886,8 @@ button.subtle:hover { background: var(--border); }
 
 button.danger { height: 32px; margin: 0; padding: 0 12px; background: var(--danger-soft); color: var(--danger); font-size: 12.5px; font-weight: 600; }
 button.danger:hover { background: #fbdada; }
+.definition-actions { width: 108px !important; min-width: 108px !important; white-space: nowrap; }
+.definition-actions form { display: flex; justify-content: flex-start; }
 
 /* ── Tables ── */
 
