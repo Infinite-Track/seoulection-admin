@@ -102,13 +102,13 @@ public class IngredientPostgresRepository {
                     ingredientId, range.targetKey(), range.productType(), decimal(range.concentrationMin()), decimal(range.concentrationMax()), range.concentrationUnit(),
                     decimal(range.onsetConcentration()), decimal(range.irritationConcentration()), range.notes());
             if (range.evidenceId() != null) {
-                jdbc.update("insert into ingredient_efficacy_profile_evidence(range_id, evidence_id) values (?, ?)", rangeId, range.evidenceId());
+                jdbc.update("insert into ingredient_efficacy_profile_evidence(profile_id, evidence_id) values (?, ?)", rangeId, range.evidenceId());
             }
         }
         for (ConditionView condition : conditions) {
             Long rangeId = jdbc.queryForObject("select id from ingredient_efficacy_profile where ingredient_id = ? and target_key = ? order by id limit 1", Long.class, ingredientId, condition.targetKey());
             if (rangeId != null) {
-                jdbc.update("insert into ingredient_efficacy_profile_condition(range_id, parameter_key, value_text, value_min, value_max, value_unit, condition_mode, interpolation_allowed) values (?, ?, ?, ?, ?, ?, ?, ?) on conflict (range_id, parameter_key) do update set value_text=excluded.value_text, value_min=excluded.value_min, value_max=excluded.value_max, value_unit=excluded.value_unit, condition_mode=excluded.condition_mode, interpolation_allowed=excluded.interpolation_allowed",
+                jdbc.update("insert into ingredient_efficacy_profile_condition(profile_id, parameter_key, value_text, value_min, value_max, value_unit, condition_mode, interpolation_allowed) values (?, ?, ?, ?, ?, ?, ?, ?) on conflict (profile_id, parameter_key) do update set value_text=excluded.value_text, value_min=excluded.value_min, value_max=excluded.value_max, value_unit=excluded.value_unit, condition_mode=excluded.condition_mode, interpolation_allowed=excluded.interpolation_allowed",
                         rangeId, condition.parameterKey(), condition.valueText(), decimal(condition.valueMin()), decimal(condition.valueMax()), condition.valueUnit(), condition.conditionMode(), condition.interpolationAllowed());
             }
         }
@@ -157,14 +157,14 @@ public class IngredientPostgresRepository {
 
     private List<EfficacyRangeView> findRanges(String ingredientId) {
         return jdbc.query("select p.id, p.target_key, p.product_type, p.concentration_min, p.concentration_max, p.concentration_unit, p.onset_concentration, p.irritation_concentration, p.role, " +
-                        "(select e.evidence_id from ingredient_efficacy_profile_evidence e where e.range_id = p.id order by e.evidence_id limit 1), p.notes " +
+                        "(select e.evidence_id from ingredient_efficacy_profile_evidence e where e.profile_id = p.id order by e.evidence_id limit 1), p.notes " +
                         "from ingredient_efficacy_profile p where p.ingredient_id = ? order by p.id", ps -> ps.setString(1, ingredientId),
                 (rs, n) -> new EfficacyRangeView(rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5),
                         rs.getString(6), rs.getString(7), rs.getString(8), (Long) rs.getObject(10), rs.getString(11), rs.getString(9), findConditions(rs.getLong(1), rs.getString(2))));
     }
 
     private List<ConditionView> findConditions(Long rangeId, String targetKey) {
-        return jdbc.query("select parameter_key, value_text, value_min, value_max, value_unit, condition_mode, interpolation_allowed from ingredient_efficacy_profile_condition where range_id = ? order by id",
+        return jdbc.query("select parameter_key, value_text, value_min, value_max, value_unit, condition_mode, interpolation_allowed from ingredient_efficacy_profile_condition where profile_id = ? order by id",
                 ps -> ps.setLong(1, rangeId), (rs, n) -> new ConditionView(targetKey, rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getBoolean(7)));
     }
 }
