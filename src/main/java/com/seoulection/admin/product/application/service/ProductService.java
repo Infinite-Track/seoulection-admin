@@ -8,6 +8,7 @@ import com.seoulection.admin.product.domain.enums.ProductStatus;
 import com.seoulection.admin.product.domain.repository.ProductRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,9 +22,18 @@ public class ProductService {
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "_id");
 
     private final ProductRepository repository;
+    private final com.seoulection.admin.product.infrastructure.repository.ProductIngredientPostgresRepository productIngredientRepository;
 
     public ProductService(ProductRepository repository) {
         this.repository = repository;
+        this.productIngredientRepository = null;
+    }
+
+    @Autowired
+    public ProductService(ProductRepository repository,
+                           com.seoulection.admin.product.infrastructure.repository.ProductIngredientPostgresRepository productIngredientRepository) {
+        this.repository = repository;
+        this.productIngredientRepository = productIngredientRepository;
     }
 
     public ProductResult register(String name, String brand, String category) {
@@ -31,7 +41,9 @@ public class ProductService {
     }
 
     public ProductResult register(String name, String brand, String category, List<String> ingredients) {
-        return ProductResult.from(repository.insert(Product.pending(name, brand, category, ingredients)));
+        ProductResult result = ProductResult.from(repository.insert(Product.pending(name, brand, category, ingredients)));
+        syncProductIngredients(result);
+        return result;
     }
 
     /** 목록 한 페이지. statuses가 비어 있으면 상태 조건 없이 조회한다(전체 탭). */
@@ -52,7 +64,9 @@ public class ProductService {
     /** 1단계 검수 — 전성분만 저장한다. 기능성(function)은 그대로 남는다. */
     public ProductResult reviewIngredients(String id, List<String> ingredients, boolean ingredientNotFound) {
         Product product = repository.findById(id);
-        return ProductResult.from(repository.save(product.reviewIngredients(ingredients, ingredientNotFound)));
+        ProductResult result = ProductResult.from(repository.save(product.reviewIngredients(ingredients, ingredientNotFound)));
+        syncProductIngredients(result);
+        return result;
     }
 
     /** 2단계 검수 — 식약처 기능성만 저장한다. 빈 목록은 "확인했으나 기능성 아님"이다. */
@@ -69,5 +83,11 @@ public class ProductService {
     private List<ProductFunctionalCategory> parseFunction(List<String> values) {
         return values == null ? List.of() : values.stream().filter(Objects::nonNull)
                 .map(ProductFunctionalCategory::from).distinct().toList();
+    }
+
+    private void syncProductIngredients(ProductResult result) {
+        if (productIngredientRepository != null) {
+            productIngredientRepository.replace(result.id(), result.ingredients(), result.ingredientSource());
+        }
     }
 }
