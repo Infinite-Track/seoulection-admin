@@ -15,38 +15,37 @@
                 <h1>YouTube 영상 관리</h1>
                 <p class="description">파이프라인에서 분석할 YouTube 영상 링크를 등록합니다.</p>
             </div>
+            <div class="topbar-actions">
+                <button type="button" class="btn-primary" data-panel-toggle="registerPanel" aria-expanded="false" aria-controls="registerPanel">
+                    <span class="btn-icon" aria-hidden="true">＋</span>영상 등록
+                </button>
+            </div>
         </header>
         <main class="content">
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
 
-            <section class="card">
-                <h2>영상 등록</h2>
-                <form th:action="@{/admin/videos}" th:object="${request}" method="post">
-                    <label for="url">YouTube 영상 링크</label>
-                    <div class="form-row">
-                        <input id="url" th:field="*{url}" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
-                        <button type="submit">영상 등록</button>
-                    </div>
-                    <p class="error" th:if="${#fields.hasErrors('url')}" th:errors="*{url}"></p>
-                </form>
-            </section>
 
-            <section class="card">
-                <h2>등록된 영상</h2>
-                <table th:if="${!videos.isEmpty()}">
-                    <thead><tr><th>영상 ID</th><th>제목</th><th>유튜버 ID</th><th>URL</th><th>상태</th></tr></thead>
-                    <tbody>
-                    <tr th:each="video : ${videos}">
-                        <td th:text="${video.videoId}"></td>
-                        <td th:text="${video.title ?: '파이프라인 확인 전'}"
-                            th:classappend="${video.title == null} ? 'pending' : ''"></td>
-                        <td th:text="${video.youtuberId ?: '파이프라인 확인 전'}"
-                            th:classappend="${video.youtuberId == null} ? 'pending' : ''"></td>
-                        <td><a th:href="${video.url}" th:text="${video.url}" target="_blank" rel="noopener"></a></td>
-                        <td><span class="badge badge-warning" th:text="${video.status}"></span></td>
-                    </tr>
-                    </tbody>
-                </table>
+
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div><h2>등록된 영상<span class="count-inline" th:text="${videos.size()}"></span></h2></div>
+                </div>
+                <div class="table-scroll" th:if="${!videos.isEmpty()}">
+                    <table class="admin-table">
+                        <thead><tr><th>영상 ID</th><th>제목</th><th>유튜버 ID</th><th>URL</th><th>상태</th></tr></thead>
+                        <tbody>
+                        <tr th:each="video : ${videos}">
+                            <td><code th:text="${video.videoId}"></code></td>
+                            <td class="cell-strong" th:text="${video.title ?: '파이프라인 확인 전'}"
+                                th:classappend="${video.title == null} ? 'pending' : ''"></td>
+                            <td th:text="${video.youtuberId ?: '파이프라인 확인 전'}"
+                                th:classappend="${video.youtuberId == null} ? 'pending' : ''"></td>
+                            <td class="cell-truncate"><a th:href="${video.url}" th:text="${video.url}" target="_blank" rel="noopener"></a></td>
+                            <td><span class="badge is-status badge-neutral" th:text="${video.status}"></span></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
                 <div class="empty" th:if="${videos.isEmpty()}">
                     <span class="empty-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="14" height="14" rx="2.5"/><path d="m20.5 8.5-4 2.5 4 2.5z"/></svg>
@@ -57,5 +56,36 @@
         </main>
     </div>
 </div>
+
+<div class="drawer-scrim" data-drawer-scrim></div>
+
+<aside class="drawer" id="registerPanel" role="dialog" aria-modal="true"
+       aria-labelledby="registerPanelTitle" th:classappend="${registerFormOpen} ? ' is-open' : ''">
+    <div class="drawer-header">
+        <div>
+            <h2 id="registerPanelTitle">영상 등록</h2>
+            <p class="card-subtitle">제목·유튜버 정보는 파이프라인이 채웁니다.</p>
+        </div>
+        <button type="button" class="btn-ghost" data-panel-toggle="registerPanel" aria-label="닫기">닫기</button>
+    </div>
+    <form th:action="@{/admin/videos}" th:object="${request}" method="post">
+        <div class="drawer-body">
+            <div class="form-section">
+                <div class="form-grid">
+                    <div class="span-full">
+                        <label for="url">YouTube 영상 링크</label>
+                        <input id="url" th:field="*{url}" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('url')}" th:errors="*{url}"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-footer">
+            <button type="button" class="button-secondary" data-panel-toggle="registerPanel">취소</button>
+            <button type="submit" class="btn-primary">영상 등록</button>
+        </div>
+    </form>
+</aside>
+<script th:src="@{/js/admin.js}"></script>
 </body>
 </html>

@@ -53,6 +53,7 @@ public class SurveyAdminController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("request", new SurveyOptionCreateRequest());
             model.addAttribute("questions", service.getQuestions());
+            model.addAttribute("questionFormOpen", true);
             return "survey";
         }
 
@@ -62,6 +63,7 @@ public class SurveyAdminController {
             bindingResult.rejectValue("questionKey", "invalid", e.getMessage());
             model.addAttribute("request", new SurveyOptionCreateRequest());
             model.addAttribute("questions", service.getQuestions());
+            model.addAttribute("questionFormOpen", true);
             return "survey";
         }
         redirectAttributes.addFlashAttribute("successMessage", "문항을 추가했습니다.");
@@ -76,6 +78,7 @@ public class SurveyAdminController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
             model.addAttribute("questions", service.getQuestions());
+            model.addAttribute("optionFormOpen", true);
             return "survey";
         }
 
@@ -87,6 +90,7 @@ public class SurveyAdminController {
             bindingResult.rejectValue("code", "invalid", e.getMessage());
             model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
             model.addAttribute("questions", service.getQuestions());
+            model.addAttribute("optionFormOpen", true);
             return "survey";
         }
         redirectAttributes.addFlashAttribute("successMessage", "선택지를 추가했습니다.");

@@ -22,7 +22,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
-    // 설문 문항·선택지 마스터만 Postgres다(나머지 관리 대상은 Mongo). 스키마 주인은 api-server이고
+    // 설문 문항·선택지와 성분 카탈로그는 Postgres다(나머지 관리 대상은 Mongo). 스키마 주인은 api-server이고
     // 여기서는 ddl-auto=none으로 붙는다 — application.yml 주석 참조.
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     runtimeOnly("org.postgresql:postgresql")

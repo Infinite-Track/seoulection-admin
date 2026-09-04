@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>제품 상세 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='products')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <nav class="breadcrumb"><a th:href="@{/admin/products}">제품 관리</a><span aria-hidden="true">/</span><span>상세</span></nav>
+                <h1 th:text="${product.name}"></h1>
+            </div>
+            <div class="topbar-actions">
+                <span class="badge is-status" th:classappend="${' badge-' + product.status.tone()}" th:text="${product.status.displayName()}"></span>
+                <a class="btn-primary" th:if="${product.status.workflowStep() != null}" th:href="@{'/admin/products/' + ${product.id} + '/workflow'}"
+                   th:text="${product.status.workflowStep() == 'ingredients'} ? '성분 보완' : '기능성 확인'"></a>
+            </div>
+        </header>
+        <main class="content">
+            <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2>기본 정보</h2>
+                        <p class="card-subtitle">등록 시 어드민이 입력하는 값입니다.</p>
+                    </div>
+                </div>
+                <dl class="detail-grid">
+                    <div><dt>제품명</dt><dd th:text="${product.name}"></dd></div>
+                    <div><dt>브랜드</dt><dd th:text="${product.brand}"></dd></div>
+                    <div><dt>카테고리</dt><dd><span class="data-chip is-neutral" th:text="${product.category}"></span></dd></div>
+                    <div><dt>제품 ID</dt><dd><code th:text="${product.id}"></code></dd></div>
+                    <div><dt>상태</dt><dd><span class="badge is-status" th:classappend="${' badge-' + product.status.tone()}" th:text="${product.status.displayName()}"></span></dd></div>
+                    <div>
+                        <dt>식약처 기능성 <code>function</code></dt>
+                        <dd>
+                            <div class="chip-list">
+                                <span class="badge badge-warning" th:unless="${product.status.functionalReviewDone()}">미검수</span>
+                                <span class="badge badge-neutral" th:if="${product.status.functionalReviewDone() && !product.hasFunction()}">확인함 · 기능성 아님</span>
+                                <span class="data-chip is-functional" th:each="fn : ${product.function}" th:text="${fn.displayName()}"></span>
+                            </div>
+                        </dd>
+                    </div>
+                    <div><dt>ASIN <code>asin</code></dt>
+                        <dd th:if="${product.asin != null}"><code th:text="${product.asin}"></code></dd>
+                        <dd class="pending" th:if="${product.asin == null}">없음</dd></div>
+                    <div><dt>가격 <code>price</code></dt>
+                        <dd class="is-numeric" th:if="${product.price != null}" th:text="${product.price}"></dd>
+                        <dd class="pending" th:if="${product.price == null}">수집 전</dd></div>
+                    <div><dt>제품 링크 <code>product_url</code></dt>
+                        <dd class="dd-wrap" th:if="${product.productUrl != null}"><a th:href="${product.productUrl}" th:text="${product.productUrl}" target="_blank" rel="noopener"></a></dd>
+                        <dd class="pending" th:if="${product.productUrl == null}">수집 전</dd></div>
+                    <div><dt>썸네일 <code>thumbnail_url</code></dt>
+                        <dd th:if="${product.thumbnailUrl != null}"><img class="thumb" th:src="${product.thumbnailUrl}" alt="" loading="lazy"></dd>
+                        <dd class="pending" th:if="${product.thumbnailUrl == null}">수집 전</dd></div>
+                    <div class="span-full"><dt>설명 <code>description</code></dt>
+                        <dd th:if="${product.description != null}" th:text="${product.description}"></dd>
+                        <dd class="pending" th:if="${product.description == null}">수집 전</dd></div>
+                </dl>
+            </section>
+
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2>전성분<span class="count-inline" th:text="${product.ingredientCount()}"></span></h2>
+                        <p class="card-subtitle">출처 <code>ingredient_source</code>:
+                            <span th:if="${product.ingredientSource != null}" th:text="${product.ingredientSource}"></span>
+                            <span class="pending" th:if="${product.ingredientSource == null}">미지정</span>
+                        </p>
+                    </div>
+                    <a class="btn-ghost" th:href="@{'/admin/products/' + ${product.id} + '/workflow'(step='ingredients')}">성분 수정</a>
+                </div>
+                <div class="form-section" th:if="${product.ingredients != null && !product.ingredients.isEmpty()}">
+                    <div class="chip-list">
+                        <span class="data-chip is-neutral" th:each="ingredient : ${product.ingredients}" th:text="${ingredient}"></span>
+                    </div>
+                </div>
+                <div class="empty" th:unless="${product.ingredients != null && !product.ingredients.isEmpty()}">
+                    <span>아직 등록된 성분이 없습니다.</span>
+                </div>
+            </section>
+
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2>파이프라인 데이터</h2>
+                        <p class="card-subtitle">어드민이 입력하지 않는, 분석 파이프라인이 채우는 값입니다.</p>
+                    </div>
+                </div>
+                <dl class="detail-grid">
+                    <div><dt>언급 수 <code>mention_count</code></dt><dd class="is-numeric" th:text="${product.mentionCount}"></dd></div>
+                    <div><dt>광고 비율 <code>ad_ratio</code></dt><dd class="is-numeric" th:text="${product.adRatio}"></dd></div>
+                    <div><dt>광고 가능성 합 <code>ad_likelihood_sum</code></dt>
+                        <dd class="is-numeric" th:if="${product.adLikelihoodSum != null}" th:text="${product.adLikelihoodSum}"></dd>
+                        <dd class="pending" th:if="${product.adLikelihoodSum == null}">분석 전</dd></div>
+                    <div>
+                        <dt>분석 시각 <code>analyzed_at</code></dt>
+                        <dd th:if="${product.analyzedAt != null}" th:text="${#temporals.format(product.analyzedAt, 'yyyy-MM-dd HH:mm')}"></dd>
+                        <dd class="pending" th:if="${product.analyzedAt == null}">분석 전</dd>
+                    </div>
+                </dl>
+                <div class="form-section">
+                    <div class="form-section-title">INCI API 원본 <code>inciapi_raw_data</code></div>
+                    <pre class="code-block" th:if="${inciapiRawJson != null}" th:text="${inciapiRawJson}"></pre>
+                    <p class="pending" th:if="${inciapiRawJson == null}">아직 수집된 원본 데이터가 없습니다.</p>
+                </div>
+            </section>
+
+            <!-- 삭제는 되돌릴 수 없으므로 목록 표가 아니라 상세 화면 맨 아래에만 둔다. -->
+            <section class="card is-flush danger-zone">
+                <div class="panel-header">
+                    <div>
+                        <h2>제품 삭제</h2>
+                        <p class="card-subtitle">문서가 <code>products</code> 컬렉션에서 완전히 지워집니다. 되돌릴 수 없습니다.</p>
+                    </div>
+                    <form th:action="@{'/admin/products/' + ${product.id} + '/delete'}" method="post"
+                          th:attr="onsubmit=|return confirm('${product.name}'+' 제품을 삭제합니다. 되돌릴 수 없습니다. 계속할까요?')|">
+                        <button type="submit" class="danger">제품 삭제</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>

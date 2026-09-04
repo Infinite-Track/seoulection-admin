@@ -6,7 +6,7 @@
   메뉴 항목이 늘어나도 이 파일만 고치면 된다.
 
   사용법: <aside th:replace="~{fragments/sidebar :: nav(active='survey')}"></aside>
-  active 값은 home / youtubers / videos / products / survey 중 하나.
+  active 값은 home / youtubers / videos / products / ingredients / survey 중 하나.
 -->
 <aside class="sidebar" th:fragment="nav(active)">
     <div class="brand">
@@ -42,6 +42,14 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8 12 3.5 20.5 8 12 12.5z"/><path d="M3.5 8v9L12 21.5 20.5 17V8"/><path d="M12 12.5V21.5"/></svg>
             </span>
             <span>제품</span>
+        </a>
+        <a class="nav-item" th:classappend="${active == 'ingredients'} ? 'is-active' : ''" th:href="@{/admin/ingredients}">
+            <span class="nav-icon"><span style="font-size:16px">✦</span></span>
+            <span>성분</span>
+        </a>
+        <a class="nav-item" th:classappend="${active == 'ingredient-properties'} ? 'is-active' : ''" th:href="@{/admin/ingredient-properties}">
+            <span class="nav-icon"><span style="font-size:16px">⚙</span></span>
+            <span>성분 특성 정의</span>
         </a>
         <a class="nav-item" th:classappend="${active == 'survey'} ? 'is-active' : ''" th:href="@{/admin/survey}">
             <span class="nav-icon">

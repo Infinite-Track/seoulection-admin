@@ -39,6 +39,7 @@ public class YoutuberController {
     ) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("youtubers", service.getYoutubers());
+            model.addAttribute("registerFormOpen", true);
             return "youtubers";
         }
 
@@ -49,6 +50,7 @@ public class YoutuberController {
         } catch (YoutubeAdminException e) {
             bindingResult.rejectValue("url", e.reason().name(), e.reason().userMessage());
             model.addAttribute("youtubers", service.getYoutubers());
+            model.addAttribute("registerFormOpen", true);
             return "youtubers";
         }
     }

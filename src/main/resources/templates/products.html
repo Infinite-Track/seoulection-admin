@@ -15,67 +15,202 @@
                 <h1>제품 관리</h1>
                 <p class="description">제품 기본 정보를 등록하면 분석 파이프라인이 나머지 정보를 채웁니다.</p>
             </div>
+            <div class="topbar-actions">
+                <button type="button" class="btn-primary" data-panel-toggle="registerPanel" aria-expanded="false" aria-controls="registerPanel">
+                    <span class="btn-icon" aria-hidden="true">＋</span>제품 등록
+                </button>
+            </div>
         </header>
         <main class="content">
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
 
-            <section class="card">
-                <h2>제품 등록</h2>
-                <form th:action="@{/admin/products}" th:object="${request}" method="post">
-                    <div class="form-grid">
-                        <div>
-                            <label for="name">제품명</label>
-                            <input id="name" th:field="*{name}" placeholder="제품명" autocomplete="off">
-                            <p class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
-                        </div>
-                        <div>
-                            <label for="brand">브랜드</label>
-                            <input id="brand" th:field="*{brand}" placeholder="브랜드명" autocomplete="off">
-                            <p class="error" th:if="${#fields.hasErrors('brand')}" th:errors="*{brand}"></p>
-                        </div>
-                        <div class="span-full">
-                            <span class="field-label">카테고리</span>
-                            <div class="toggle-group">
-                                <label class="toggle-option"><input type="radio" th:field="*{category}" value="sunscreens"><span>Sunscreens</span></label>
-                                <label class="toggle-option"><input type="radio" th:field="*{category}" value="toners"><span>Toners</span></label>
-                                <label class="toggle-option"><input type="radio" th:field="*{category}" value="treatments"><span>Treatments</span></label>
-                                <label class="toggle-option"><input type="radio" th:field="*{category}" value="moisturizers"><span>Moisturizers</span></label>
-                                <label class="toggle-option"><input type="radio" th:field="*{category}" value="cleansers"><span>Cleansers</span></label>
-                                <label class="toggle-option"><input type="radio" th:field="*{category}" value="face masks"><span>Face Masks</span></label>
-                            </div>
-                            <p class="error" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></p>
+            <!--
+              탭은 파이프라인 진행 순서대로 왼쪽 → 오른쪽으로 놓는다. 앞의 두 개(성분 보완·기능성 확인)가
+              어드민이 손을 대야 넘어가는 큐이고, 그 뒤는 파이프라인이 굴리거나 이미 끝난 것들이라
+              구분선으로 갈라 놓았다. 기본 탭이 전체가 아닌 이유도 같다 — 이 화면을 여는 이유는
+              대개 "지금 처리할 게 뭔가"이지 "전부 몇 개인가"가 아니다.
+            -->
+            <!--
+              탭은 ProductStage를 그대로 그린다 — 순서·이름·묶음이 전부 enum에 있어서
+              화면이 "ingredients" 같은 문자열을 직접 비교하지 않는다. 단계가 늘면 enum만 고치면 된다.
+            -->
+            <div class="toolbar">
+                <nav class="tabs" aria-label="제품 작업 단계">
+                    <th:block th:each="s, i : ${stages}">
+                        <span class="tabs-divider" aria-hidden="true"
+                              th:if="${i.index > 0 and stages[i.index - 1].group() != s.group()}"></span>
+                        <span class="tabs-group-label" th:if="${!#strings.isEmpty(s.group())
+                              and (i.index == 0 or stages[i.index - 1].group() != s.group())}"
+                              th:text="${s.group()}"></span>
+                        <a th:classappend="${selectedStageSlug == s.slug()} ? ' is-active' : ''"
+                           th:href="@{/admin/products(stage=${s.slug()},q=${#strings.isEmpty(query) ? null : query})}">
+                            <span th:text="${s.label()}"></span>
+                            <span class="count"
+                                  th:classappend="${stageCounts[s.slug()] > 0 ? ' ' + s.countTone() : ''}"
+                                  th:text="${stageCounts[s.slug()]}"></span>
+                        </a>
+                    </th:block>
+                    <span class="tabs-divider" aria-hidden="true"></span>
+                    <a th:classappend="${selectedStageSlug == 'all'} ? ' is-active' : ''"
+                       th:href="@{/admin/products(stage='all',q=${#strings.isEmpty(query) ? null : query})}">
+                        전체<span class="count" th:text="${productCount}"></span>
+                    </a>
+                </nav>
+            </div>
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2>등록된 제품<span class="count-inline" th:text="${page.totalElements()}"></span></h2>
+                        <p class="card-subtitle"
+                           th:text="${selectedStage != null ? selectedStage.description()
+                                    : '모든 상태의 제품입니다. 아래 상태 칩으로 좁혀 볼 수 있습니다.'}"></p>
+                        <!--
+                          탭은 여러 상태를 묶은 큐라서, 그 안에서 한 상태만 보고 싶을 때가 있다.
+                          소계를 링크로 만들어 ?status=로 좁힌다 — 탭을 더 쪼개지 않고 정밀 조회를 준다.
+                        -->
+                        <div class="substat">
+                            <a th:each="s : ${substatStatuses}"
+                               th:if="${statusCounts.getOrDefault(s, 0) > 0 or selectedStatus == s.name()}"
+                               th:classappend="${selectedStatus == s.name()} ? ' is-active' : ''"
+                               th:href="@{/admin/products(stage=${selectedStageSlug},status=${selectedStatus == s.name() ? null : s.name()},q=${#strings.isEmpty(query) ? null : query})}">
+                                <span th:text="${s.displayName()}"></span>
+                                <b th:text="${statusCounts.getOrDefault(s, 0)}"></b>
+                            </a>
                         </div>
                     </div>
-                    <button type="submit">제품 등록</button>
-                </form>
-            </section>
-
-            <section class="card">
-                <h2>등록된 제품</h2>
-                <table th:if="${!products.isEmpty()}">
-                    <thead>
-                    <tr><th>제품명</th><th>브랜드</th><th>카테고리</th><th>언급 수</th><th>광고 비율</th><th>상태</th></tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="product : ${products}">
-                        <td th:text="${product.name}"></td>
-                        <td th:text="${product.brand}"></td>
-                        <td th:text="${product.category}"></td>
-                        <td th:text="${product.mentionCount}"></td>
-                        <td th:text="${product.adRatio}"></td>
-                        <td><span class="badge badge-warning" th:text="${product.status}"></span></td>
-                    </tr>
-                    </tbody>
-                </table>
-                <div class="empty" th:if="${products.isEmpty()}">
+                    <form class="toolbar-search" method="get" th:action="@{/admin/products}" role="search">
+                        <input type="hidden" name="stage" th:value="${selectedStageSlug}">
+                        <input type="hidden" name="status" th:value="${selectedStatus}">
+                        <span class="search-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        </span>
+                        <input type="search" name="q" th:value="${query}" placeholder="제품명 · 브랜드 검색" aria-label="제품명 또는 브랜드로 검색">
+                        <a class="btn-ghost" th:if="${!#strings.isEmpty(query)}" th:href="@{/admin/products(stage=${selectedStageSlug})}">초기화</a>
+                    </form>
+                </div>
+                <div class="table-scroll" th:if="${!page.isEmpty()}">
+                    <table class="admin-table product-table">
+                        <thead>
+                        <tr><th>제품명</th><th>브랜드</th><th>카테고리</th><th>기능성</th><th class="is-numeric">성분</th><th>상태</th><th>검수</th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="product : ${page.content()}">
+                            <td class="cell-strong"><a th:href="@{'/admin/products/' + ${product.id}}" th:text="${product.name}"></a></td>
+                            <td th:text="${product.brand}"></td>
+                            <td><span class="data-chip is-neutral" th:text="${product.category}"></span></td>
+                            <td>
+                                <div class="chip-list">
+                                    <span class="badge badge-warning" th:unless="${product.status.functionalReviewDone()}">미검수</span>
+                                    <span class="badge badge-neutral" th:if="${product.status.functionalReviewDone() && !product.hasFunction()}">아님</span>
+                                    <span class="data-chip is-functional" th:each="fn : ${product.function}" th:text="${fn.displayName()}"></span>
+                                </div>
+                            </td>
+                            <td class="is-numeric" th:text="${product.ingredientCount()}"></td>
+                            <td>
+                                <span class="badge is-status" th:classappend="${' badge-' + product.status.tone()}"
+                                      th:text="${product.status.displayName()}"></span>
+                            </td>
+                            <td class="admin-actions">
+                                <a class="text-link" th:if="${product.status.workflowStep() != null}"
+                                   th:href="@{'/admin/products/' + ${product.id} + '/workflow'}"
+                                   th:text="${product.status.actionLabel()}"></a>
+                                <a class="text-link" th:if="${product.status.workflowStep() == null}"
+                                   th:href="@{'/admin/products/' + ${product.id}}">상세 보기</a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <nav class="pagination" th:if="${page.totalPages() > 1}" aria-label="페이지 이동">
+                    <span class="pagination-range"
+                          th:text="|${page.firstItem()}-${page.lastItem()} / ${page.totalElements()}|"></span>
+                    <div class="pagination-buttons">
+                        <a th:if="${page.hasPrevious()}"
+                           th:href="@{/admin/products(stage=${selectedStageSlug},status=${selectedStatus},q=${#strings.isEmpty(query) ? null : query},page=${page.page() - 1})}">이전</a>
+                        <span th:unless="${page.hasPrevious()}" class="is-disabled">이전</span>
+                        <span class="pagination-page" th:text="|${page.page() + 1} / ${page.totalPages()}|"></span>
+                        <a th:if="${page.hasNext()}"
+                           th:href="@{/admin/products(stage=${selectedStageSlug},status=${selectedStatus},q=${#strings.isEmpty(query) ? null : query},page=${page.page() + 1})}">다음</a>
+                        <span th:unless="${page.hasNext()}" class="is-disabled">다음</span>
+                    </div>
+                </nav>
+                <div class="empty" th:if="${page.isEmpty()}">
                     <span class="empty-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8 12 3.5 20.5 8 12 12.5z"/><path d="M3.5 8v9L12 21.5 20.5 17V8"/></svg>
                     </span>
-                    <span>등록된 제품이 없습니다.</span>
+                    <span th:if="${#strings.isEmpty(query)}">이 상태의 제품이 없습니다.</span>
+                    <span th:unless="${#strings.isEmpty(query)}" th:text="|'${query}' 검색 결과가 이 탭에는 없습니다.|"></span>
+                    <a class="text-link" th:if="${!#strings.isEmpty(query)}" th:href="@{/admin/products(stage='all',q=${#strings.isEmpty(query) ? null : query})}">전체 탭에서 검색 결과 보기</a>
+                    <a class="text-link" th:href="@{/admin/products(stage='all')}" th:if="${selectedStageSlug != 'all' && #strings.isEmpty(query)}">전체 제품 보기</a>
                 </div>
             </section>
         </main>
     </div>
 </div>
+
+<div class="drawer-scrim" data-drawer-scrim></div>
+
+<!--
+  등록 폼은 드로어로 연다. 목록 사이에 끼워 넣으면 표가 아래로 밀리고, 모달에 넣으면 800px가
+  넘는 이 폼이 잘린다(노트북 뷰포트 ≈ 760px). 드로어는 화면 높이를 그대로 쓰고 목록을 왼쪽에
+  남긴다. .shell 밖에 두는 이유는 열려 있는 동안 배경 전체에 inert를 걸기 위해서다.
+-->
+<aside class="drawer" id="registerPanel" role="dialog" aria-modal="true"
+       aria-labelledby="registerPanelTitle" th:classappend="${registerFormOpen} ? ' is-open' : ''">
+    <div class="drawer-header">
+        <div>
+            <h2 id="registerPanelTitle">제품 등록</h2>
+            <p class="card-subtitle">제품명·브랜드·카테고리만 넣어도 등록됩니다. 나머지는 파이프라인이 채웁니다.</p>
+        </div>
+        <button type="button" class="btn-ghost" data-panel-toggle="registerPanel" aria-label="닫기">닫기</button>
+    </div>
+    <form th:action="@{/admin/products}" th:object="${request}" method="post">
+        <div class="drawer-body">
+            <div class="form-section">
+                <div class="form-section-title">기본 정보<span class="required-mark">필수</span></div>
+                <div class="form-grid cols-2">
+                    <div>
+                        <label for="name">제품명</label>
+                        <input id="name" th:field="*{name}" placeholder="예) 시카 리페어 세럼" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+                    </div>
+                    <div>
+                        <label for="brand">브랜드</label>
+                        <input id="brand" th:field="*{brand}" placeholder="예) 서울렉션" autocomplete="off">
+                        <p class="error" th:if="${#fields.hasErrors('brand')}" th:errors="*{brand}"></p>
+                    </div>
+                    <div class="span-full">
+                        <span class="field-label">카테고리</span>
+                        <div class="toggle-group">
+                            <label class="toggle-option"><input type="radio" th:field="*{category}" value="sunscreens"><span>Sunscreens</span></label>
+                            <label class="toggle-option"><input type="radio" th:field="*{category}" value="toners"><span>Toners</span></label>
+                            <label class="toggle-option"><input type="radio" th:field="*{category}" value="treatments"><span>Treatments</span></label>
+                            <label class="toggle-option"><input type="radio" th:field="*{category}" value="moisturizers"><span>Moisturizers</span></label>
+                            <label class="toggle-option"><input type="radio" th:field="*{category}" value="cleansers"><span>Cleansers</span></label>
+                            <label class="toggle-option"><input type="radio" th:field="*{category}" value="face masks"><span>Face Masks</span></label>
+                        </div>
+                        <p class="error" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">전성분<span class="optional-mark">선택</span></div>
+                <div class="form-grid">
+                    <div class="span-full">
+                        <label for="ingredientsText">전성분(INCI) 직접 보완</label>
+                        <textarea id="ingredientsText" th:field="*{ingredientsText}" rows="4" placeholder="성분을 쉼표 또는 줄바꿈으로 입력하세요."></textarea>
+                        <p class="form-help">파이프라인이 성분을 가져오지 못한 제품에만 사용합니다. 비워두면 파이프라인이 먼저 시도합니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-footer">
+            <button type="button" class="button-secondary" data-panel-toggle="registerPanel">취소</button>
+            <button type="submit" class="btn-primary">제품 등록</button>
+        </div>
+    </form>
+</aside>
+<script th:src="@{/js/admin.js}"></script>
 </body>
 </html>
