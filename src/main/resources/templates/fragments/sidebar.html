@@ -63,6 +63,12 @@
             </span>
             <span>피부 점수 정책</span>
         </a>
+        <a class="nav-item" th:classappend="${active == 'notifications'} ? 'is-active' : ''" th:href="@{/admin/notifications}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+            </span>
+            <span>푸시 알림</span>
+        </a>
     </nav>
 
     <div class="sidebar-footer">MySeoulection Admin</div>
