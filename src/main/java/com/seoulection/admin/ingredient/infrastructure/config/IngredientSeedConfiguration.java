@@ -3,7 +3,6 @@ package com.seoulection.admin.ingredient.infrastructure.config;
 import com.seoulection.admin.ingredient.infrastructure.document.Ingredient;
 import com.seoulection.admin.ingredient.infrastructure.repository.IngredientPostgresRepository;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,7 +12,6 @@ import java.util.Map;
 @Configuration
 public class IngredientSeedConfiguration {
     @Bean
-    @ConditionalOnProperty(name = "admin.ingredient.seed.enabled", havingValue = "true")
     ApplicationRunner seedIngredients(IngredientPostgresRepository repository) {
         return args -> {
             if (!repository.findAll().isEmpty()) return;

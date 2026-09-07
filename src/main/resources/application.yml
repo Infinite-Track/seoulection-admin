@@ -19,10 +19,3 @@ spring:
 
 server:
   port: ${SERVER_PORT:8081}
-
-# V1 ingredient 테이블이 있는 개발 DB에서만 명시적으로 켠다. 새 V2 로컬 DB에는 아직 이
-# 레거시 스키마가 없으므로, 시드가 관리자 앱의 기동 자체를 막아서는 안 된다.
-admin:
-  ingredient:
-    seed:
-      enabled: ${ADMIN_INGREDIENT_SEED_ENABLED:false}
