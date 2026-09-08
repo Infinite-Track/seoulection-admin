@@ -54,6 +54,12 @@
                                 <p class="form-help">성분 정보를 어디서도 찾지 못한 경우에만 '찾지 못함'을 고르세요 — <code>NOT_FOUND</code>로 저장됩니다.</p>
                             </div>
                             <div class="span-full">
+                                <label for="nameKo">제품 한글 이름</label>
+                                <input id="nameKo" name="nameKo" type="text" th:value="${product.nameKo}"
+                                       placeholder="예: 구달 청귤 비타C 잡티 세럼">
+                                <p class="form-help">비워 두면 기존 값을 유지합니다. 사용자 화면에서 영문명 대신 보여 줍니다.</p>
+                            </div>
+                            <div class="span-full">
                                 <label for="ingredientsText">전성분(INCI)</label>
                                 <textarea id="ingredientsText" name="ingredientsText" rows="8" th:text="${request.ingredientsText}" placeholder="성분을 쉼표 또는 줄바꿈으로 입력하세요."></textarea>
                                 <p class="form-help">성분을 입력하거나, 못 찾았으면 위에서 '찾지 못함'을 고르세요. 빈 채로는 저장되지 않습니다. 저장하면 기능성 확인 단계로 넘어갑니다.</p>

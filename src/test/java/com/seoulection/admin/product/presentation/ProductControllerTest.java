@@ -302,7 +302,7 @@ class ProductControllerTest {
     }
 
     private ProductResult reviewedProduct() {
-        return new ProductResult("abc", null, "시카 세럼", "서울렉션", "treatments", null, null, null, null,
+        return new ProductResult("abc", null, "시카 세럼", null, "서울렉션", "treatments", null, null, null, null,
                 0L, BigDecimal.ZERO, null, "ADMIN", List.of("Water"), null, null,
                 List.of(), ProductStatus.READY_FOR_INCIAPI);
     }
@@ -356,7 +356,7 @@ class ProductControllerTest {
     }
 
     private ProductResult product() {
-        return new ProductResult("abc", null, "시카 세럼", "서울렉션", "treatments", null, null, null, null,
+        return new ProductResult("abc", null, "시카 세럼", null, "서울렉션", "treatments", null, null, null, null,
                 0L, BigDecimal.ZERO, null, "ADMIN", List.of("Water"), null, null,
                 List.of(), ProductStatus.INGREDIENTS_ADDED);
     }

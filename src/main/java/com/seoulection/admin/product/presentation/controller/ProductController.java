@@ -20,6 +20,9 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.seoulection.admin.product.application.dto.ProductIngredientProperty;
+import java.util.ArrayList;
+import java.math.BigDecimal;
 
 @Controller
 public class ProductController {
@@ -150,8 +153,66 @@ public class ProductController {
     public String detail(@PathVariable String id, Model model) {
         var product = service.getProduct(id);
         model.addAttribute("product", product);
+        model.addAttribute("productIngredients", service.getProductIngredients(id));
+        model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         model.addAttribute("inciapiRawJson", prettyJson(product.inciapiRawData()));
         return "product-detail";
+    }
+
+    @PostMapping("/admin/products/{id}/basic")
+    public String updateBasic(@PathVariable String id, @RequestParam String name,
+                              @RequestParam(required=false) String nameKo, @RequestParam String brand,
+                              @RequestParam String category, RedirectAttributes redirectAttributes) {
+        service.updateBasicInfo(id, name, nameKo, brand, category);
+        redirectAttributes.addFlashAttribute("successMessage", "제품 기본 정보를 저장했습니다.");
+        return "redirect:/admin/products/" + id;
+    }
+
+    /**
+     * 성분 한 행 저장 — 함량과 <b>이 제품에서의 특성</b>.
+     *
+     * <p>특성은 폼에서 {@code propertyKey[]}, {@code propertyValueText[]} ... 처럼 같은 이름의 배열로
+     * 온다. 순서가 곧 짝이므로 인덱스로 묶는다. 빈 칸은 저장하지 않는다 — 지운 것과 같게 다룬다.
+     */
+    @PostMapping("/admin/products/{id}/ingredients/{rowId}")
+    public String reviewIngredient(@PathVariable String id, @PathVariable long rowId,
+            @RequestParam(required=false) String ingredientId,
+            @RequestParam(required=false) BigDecimal concentrationMin,
+            @RequestParam(required=false) BigDecimal concentrationMax,
+            @RequestParam(required=false) String unit,
+            @RequestParam(required=false) String notes,
+            @RequestParam(required=false) List<String> propertyKey,
+            @RequestParam(required=false) List<String> propertyValueText,
+            @RequestParam(required=false) List<String> propertyValueMin,
+            @RequestParam(required=false) List<String> propertyValueMax,
+            RedirectAttributes redirectAttributes) {
+        service.reviewProductIngredient(id, rowId, ingredientId, concentrationMin, concentrationMax, unit, notes,
+                toProperties(propertyKey, propertyValueText, propertyValueMin, propertyValueMax));
+        redirectAttributes.addFlashAttribute("successMessage", "제품별 성분 정보를 저장했습니다.");
+        return "redirect:/admin/products/" + id;
+    }
+
+    private List<ProductIngredientProperty> toProperties(List<String> keys, List<String> texts,
+                                                        List<String> mins, List<String> maxs) {
+        if (keys == null) return List.of();   // 특성 칸이 아예 없는 폼 → 건드리지 않는다
+        List<ProductIngredientProperty> properties = new ArrayList<>();
+        for (int i = 0; i < keys.size(); i++) {
+            String key = keys.get(i);
+            if (key == null || key.isBlank()) continue;
+            properties.add(new ProductIngredientProperty(key, at(texts, i),
+                    decimal(at(mins, i)), decimal(at(maxs, i)), null, null));
+        }
+        return properties;
+    }
+
+    private String at(List<String> values, int index) {
+        return values == null || index >= values.size() ? null : values.get(index);
+    }
+
+    /** 빈 칸과 "숫자가 아님"을 모두 null 로 본다 — 폼 하나 때문에 500을 내지 않는다. */
+    private BigDecimal decimal(String value) {
+        if (value == null || value.isBlank()) return null;
+        try { return new BigDecimal(value.trim()); } catch (NumberFormatException e) { return null; }
     }
 
     private String prettyJson(Map<String, Object> raw) {
@@ -191,6 +252,13 @@ public class ProductController {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "성분을 입력하거나, 찾지 못한 경우 '성분을 찾지 못함'을 선택해 주세요.");
             return "redirect:/admin/products/" + id + "/workflow";
+        }
+        // 한글 이름은 전성분과 같은 폼에서 받는다 — 한 화면에서 하는 일을 두 번 저장하게 만들지 않는다.
+        // 비워 두면 기존 값을 유지한다(지우려는 의도와 구분할 수 없어 덮어쓰지 않는다).
+        String nameKo = request.getNameKo();
+        if (nameKo != null && !nameKo.isBlank()) {
+            var current = service.getProduct(id);
+            service.updateBasicInfo(id, current.name(), nameKo.trim(), current.brand(), current.category());
         }
         service.reviewIngredients(id, ingredients, ingredientNotFound);
         redirectAttributes.addFlashAttribute("successMessage", "전성분을 저장했습니다.");

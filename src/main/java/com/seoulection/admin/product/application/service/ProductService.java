@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.math.BigDecimal;
+import com.seoulection.admin.product.application.dto.ProductIngredientResult;
 
 @Service
 public class ProductService {
@@ -22,7 +24,7 @@ public class ProductService {
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "_id");
 
     private final ProductRepository repository;
-    private final com.seoulection.admin.product.infrastructure.repository.ProductIngredientPostgresRepository productIngredientRepository;
+    private final com.seoulection.admin.product.application.port.ProductIngredientPort productIngredientRepository;
 
     public ProductService(ProductRepository repository) {
         this.repository = repository;
@@ -31,7 +33,7 @@ public class ProductService {
 
     @Autowired
     public ProductService(ProductRepository repository,
-                           com.seoulection.admin.product.infrastructure.repository.ProductIngredientPostgresRepository productIngredientRepository) {
+                           com.seoulection.admin.product.application.port.ProductIngredientPort productIngredientRepository) {
         this.repository = repository;
         this.productIngredientRepository = productIngredientRepository;
     }
@@ -59,6 +61,28 @@ public class ProductService {
 
     public ProductResult getProduct(String id) {
         return ProductResult.from(repository.findById(id));
+    }
+
+    public ProductResult updateBasicInfo(String id, String name, String nameKo, String brand, String category) {
+        Product product = repository.findById(id);
+        return ProductResult.from(repository.save(product.updateBasicInfo(name, nameKo, brand, category)));
+    }
+
+    public List<ProductIngredientResult> getProductIngredients(String id) {
+        repository.findById(id);
+        return productIngredientRepository == null ? List.of() : productIngredientRepository.findByProductId(id);
+    }
+
+    public void reviewProductIngredient(String productId, long rowId, String ingredientId, BigDecimal min,
+                                        BigDecimal max, String unit, String notes,
+                                        java.util.List<com.seoulection.admin.product.application.dto.ProductIngredientProperty> properties) {
+        repository.findById(productId);
+        productIngredientRepository.review(productId, rowId, ingredientId, min, max, unit, notes, properties);
+    }
+
+    /** 화면이 특성 입력 칸을 그릴 때 쓰는 정의 목록. */
+    public java.util.List<com.seoulection.admin.product.application.dto.PropertyDefinitionResult> propertyDefinitions() {
+        return productIngredientRepository == null ? List.of() : productIngredientRepository.propertyDefinitions();
     }
 
     /** 1단계 검수 — 전성분만 저장한다. 기능성(function)은 그대로 남는다. */

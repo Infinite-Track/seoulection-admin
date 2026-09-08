@@ -27,6 +27,7 @@ public class Product {
     private final String id;
     private final String asin;
     private final String name;
+    private final String nameKo;
     private final String brand;
     private final ProductCategory category;
     private final String description;
@@ -47,6 +48,7 @@ public class Product {
         this.id = builder.id;
         this.asin = builder.asin;
         this.name = requireText(builder.name, "name");
+        this.nameKo = builder.nameKo;
         this.brand = requireText(builder.brand, "brand");
         this.category = Objects.requireNonNull(builder.category);
         this.description = builder.description;
@@ -98,6 +100,7 @@ public class Product {
     public String id() { return id; }
     public String asin() { return asin; }
     public String name() { return name; }
+    public String nameKo() { return nameKo; }
     public String brand() { return brand; }
     public String category() { return category.value(); }
     public String description() { return description; }
@@ -163,9 +166,15 @@ public class Product {
         return toBuilder().function(function).status(nextStatus).build();
     }
 
+    public Product updateBasicInfo(String name, String nameKo, String brand, String category) {
+        return toBuilder().name(name).nameKo(blankToNull(nameKo)).brand(brand).category(category).build();
+    }
+
+    private static String blankToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+
     public Builder toBuilder() {
         return new Builder()
-                .id(id).asin(asin).name(name).brand(brand).category(category)
+                .id(id).asin(asin).name(name).nameKo(nameKo).brand(brand).category(category)
                 .description(description).price(price).thumbnailUrl(thumbnailUrl).productUrl(productUrl)
                 .mentionCount(mentionCount).adRatio(adRatio).adLikelihoodSum(adLikelihoodSum)
                 .ingredientSource(ingredientSource).ingredients(ingredients)
@@ -178,6 +187,7 @@ public class Product {
         private String id;
         private String asin;
         private String name;
+        private String nameKo;
         private String brand;
         private ProductCategory category;
         private String description;
@@ -197,6 +207,7 @@ public class Product {
         public Builder id(String v) { this.id = v; return this; }
         public Builder asin(String v) { this.asin = v; return this; }
         public Builder name(String v) { this.name = v; return this; }
+        public Builder nameKo(String v) { this.nameKo = v; return this; }
         public Builder brand(String v) { this.brand = v; return this; }
         public Builder category(ProductCategory v) { this.category = v; return this; }
         public Builder category(String v) { this.category = ProductCategory.from(v); return this; }

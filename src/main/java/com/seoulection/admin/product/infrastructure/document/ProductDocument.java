@@ -25,6 +25,8 @@ public class ProductDocument {
     private String asin;
 
     private String name;
+    @Field("name_ko")
+    private String nameKo;
     private String brand;
     private String category;
     private String description;
@@ -72,6 +74,7 @@ public class ProductDocument {
         this.id = product.id();
         this.asin = product.asin();
         this.name = product.name();
+        this.nameKo = product.nameKo();
         this.brand = product.brand();
         this.category = product.category();
         this.description = product.description();
@@ -98,6 +101,7 @@ public class ProductDocument {
                 .id(id)
                 .asin(asin)
                 .name(name)
+                .nameKo(nameKo)
                 .brand(brand)
                 .category(category)
                 .description(description)
