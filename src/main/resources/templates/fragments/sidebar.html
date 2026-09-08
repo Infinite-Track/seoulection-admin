@@ -69,6 +69,12 @@
             </span>
             <span>푸시 알림</span>
         </a>
+        <a class="nav-item" th:classappend="${active == 'notification-devices'} ? 'is-active' : ''" th:href="@{/admin/notifications/devices}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+            </span>
+            <span>기기 토큰</span>
+        </a>
     </nav>
 
     <div class="sidebar-footer">MySeoulection Admin</div>
