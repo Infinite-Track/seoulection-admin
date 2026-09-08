@@ -18,11 +18,9 @@ repositories {
 }
 
 dependencies {
-	// Claude API — 기능성 스크리닝의 이름 해석(브랜드 한글 표기·등록명 후보·동일 제품 판정)에 쓴다.
-	// ⚠️ 이 의존성이 없으면 ClaudeProductNameResolver 가 컴파일되지 않아 앱이 아예 기동하지 않는다.
-	//    LLM 을 끄는 것은 admin.functional-screening.llm.enabled=false 로 하는 것이지,
-	//    의존성을 빼는 것이 아니다(@ConditionalOnProperty 는 런타임 스위치다).
-	implementation("com.anthropic:anthropic-java:2.34.0")
+    // 기능성 스크리닝의 이름 해석(브랜드 한글 표기·등록명 후보·동일 제품 판정)은 Gemini를 쓴다.
+    // SDK 의존성 없이 RestClient로 REST를 직접 부른다 — 이 프로젝트의 다른 외부 연동
+    // (MFDS, V2 product-service, 알림)과 같은 방식이고, 새 의존성이 필요 없다.
 
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
@@ -32,6 +30,7 @@ dependencies {
     // 여기서는 ddl-auto=none으로 붙는다 — application.yml 주석 참조.
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     runtimeOnly("org.postgresql:postgresql")
+
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 

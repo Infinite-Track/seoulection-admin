@@ -1,6 +1,9 @@
 package com.seoulection.admin.product.presentation.controller;
 
 import com.seoulection.admin.product.application.service.ProductService;
+import com.seoulection.admin.product.domain.enums.ProductFunctionalCategory;
+import com.seoulection.admin.product.functional.application.FunctionalScreeningService;
+import com.seoulection.admin.product.functional.domain.FunctionalScreening;
 import com.seoulection.admin.product.domain.enums.ProductStage;
 import com.seoulection.admin.product.domain.enums.ProductStatus;
 import com.seoulection.admin.product.presentation.dto.ProductRegisterRequest;
@@ -31,10 +34,13 @@ public class ProductController {
     private static final int PAGE_SIZE = 25;
 
     private final ProductService service;
+    private final FunctionalScreeningService screeningService;
     private final ObjectMapper objectMapper;
 
-    public ProductController(ProductService service, ObjectMapper objectMapper) {
+    public ProductController(ProductService service, FunctionalScreeningService screeningService,
+                             ObjectMapper objectMapper) {
         this.service = service;
+        this.screeningService = screeningService;
         this.objectMapper = objectMapper;
     }
 
@@ -267,8 +273,81 @@ public class ProductController {
             redirectAttributes.addFlashAttribute("successMessage", "성분을 찾지 못함으로 저장했습니다.");
             return "redirect:/admin/products?stage=ingredient-review";
         }
-        redirectAttributes.addFlashAttribute("successMessage", "전성분을 저장했습니다. 이어서 함량을 입력하세요.");
+        redirectAttributes.addFlashAttribute("successMessage",
+                "전성분을 저장했습니다. 이어서 성분별 보완을 마치고 아래 '성분 보완 완료'를 누르세요.");
         return "redirect:/admin/products/" + id + "/workflow?step=ingredients";
+    }
+
+    /**
+     * 1단계 완료 선언 — 성분별 보완을 마쳤다는 뜻이고, 여기서 상태가 INGREDIENTS_ADDED 가 된다.
+     *
+     * <p>함량을 하나도 안 채웠어도 누를 수 있다. 채울 값이 없는 제품이 실제로 있고, 그때
+     * 완료를 막으면 제품이 성분 보완 큐에 영원히 남는다.
+     */
+    @PostMapping("/admin/products/{id}/workflow/ingredients/complete")
+    public String completeIngredientReview(@PathVariable String id, RedirectAttributes redirectAttributes) {
+        try {
+            service.completeIngredientReview(id);
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/admin/products/" + id + "/workflow?step=ingredients";
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "성분 보완을 마쳤습니다. 이어서 기능성을 확인하세요.");
+        return "redirect:/admin/products/" + id + "/workflow?step=functional";
+    }
+
+    /**
+     * 2단계 자동 — 한글 이름을 저장하고 곧바로 의약품안전나라를 조회해 기능성까지 기록한다.
+     *
+     * <p>트리거가 한글 이름인 이유: 안전나라 등록명(ITEM_NAME)은 전부 한글이고 브랜드 한글
+     * 표기로 시작한다("구달청귤비타씨잡티세럼"). 영문 제품명만으로는 조회가 시작조차 안 되므로,
+     * 한글 이름이 채워지는 그 순간이 자동 조회가 가장 잘 듣는 시점이다.
+     *
+     * <p>확정되면 큐로 돌아가고, 못 찾으면 같은 화면에 남아 후보와 사유를 보여 준다 —
+     * 어드민이 손대는 건 그때뿐이다.
+     */
+    @PostMapping("/admin/products/{id}/workflow/functional-screening")
+    public String workflowScreen(@PathVariable String id, @RequestParam(required = false) String nameKo,
+                                 RedirectAttributes redirectAttributes) {
+        if (nameKo == null || nameKo.isBlank()) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "자동 조회는 한글 이름으로 검색합니다 — 한글 이름을 먼저 입력해 주세요.");
+            return "redirect:/admin/products/" + id + "/workflow?step=functional";
+        }
+        var current = service.getProduct(id);
+        service.updateBasicInfo(id, current.name(), nameKo.trim(), current.brand(), current.category());
+
+        var screened = screeningService.screenAfterNameSaved(id);
+        if (screened.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "자동 조회가 꺼져 있습니다(admin.functional-screening.enabled). 아래에서 직접 입력해 주세요.");
+            return "redirect:/admin/products/" + id + "/workflow?step=functional";
+        }
+
+        FunctionalScreening screening = screened.get();
+        if (screening.outcome().decided()) {
+            // 규제 정보가 조용히 저장되고 화면만 넘어가면 나중에 되짚을 실마리가 없다 —
+            // 무엇이 어떤 근거로 기록됐는지 문구로 남긴다.
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "한글 이름을 저장하고 기능성을 자동 확정했습니다 — " + describe(screening));
+            return "redirect:/admin/products?stage=functional-review";
+        }
+        redirectAttributes.addFlashAttribute("errorMessage",
+                "자동 조회로 확정하지 못했습니다(" + screening.outcome().displayName() + "): "
+                        + screening.reason() + " 아래에서 직접 확인해 주세요.");
+        return "redirect:/admin/products/" + id + "/workflow?step=functional";
+    }
+
+    /** 자동 확정 결과 문구. 유형이 비어 있으면 "기능성 아님"으로 확정된 것이다. */
+    private String describe(FunctionalScreening screening) {
+        var selected = screening.selected();
+        String evidence = selected == null ? "" : " / 근거: " + selected.item().itemName();
+        if (screening.claims().isEmpty()) {
+            return "기능성 아님 (" + screening.reason() + ")";
+        }
+        return screening.claims().stream()
+                .map(ProductFunctionalCategory::displayName)
+                .reduce((a, b) -> a + ", " + b).orElse("") + evidence;
     }
 
     /** 2단계 저장 — 식약처 기능성만. 저장 후 기능성 확인 큐로 돌아간다. */
@@ -295,6 +374,9 @@ public class ProductController {
         }
         // '기능성 아님'을 고르고 유형을 남겨 두면 모순이므로 유형을 버린다.
         service.reviewFunction(id, confirmed ? request.getFunction() : List.of());
+        // 자동 판정이 남아 있다면 "사람이 정했다"로 덮는다 — 나중에 이 제품의 기능성이
+        // 누구의 판단이었는지 되짚을 수 있어야 한다.
+        screeningService.markDecidedByAdmin(id);
         redirectAttributes.addFlashAttribute("successMessage", "기능성 검수 정보를 저장했습니다.");
         return "redirect:/admin/products?stage=functional-review";
     }
@@ -346,6 +428,11 @@ public class ProductController {
         if ("ingredients".equals(resolved)) {
             model.addAttribute("productIngredients", service.getProductIngredients(id));
             model.addAttribute("propertyDefinitions", service.propertyDefinitions());
+        }
+        if ("functional".equals(resolved)) {
+            // 한글 이름이 이미 있으면 화면을 여는 것만으로 자동 조회가 한 번 돈다. 없으면
+            // 조회할 근거가 없으니 아무것도 하지 않고 입력 칸만 보여 준다.
+            model.addAttribute("screening", screeningService.findOrScreen(id).orElse(null));
         }
         return "product-workflow";
     }

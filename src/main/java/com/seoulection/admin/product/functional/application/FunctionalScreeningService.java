@@ -99,12 +99,39 @@ public class FunctionalScreeningService {
         return Optional.of(screen(productId));
     }
 
-    /** 화면에서 쓰는 조회 — 판정이 없으면 그때 한 번 돌린다. */
+    /**
+     * 화면에서 쓰는 조회 — 판정이 없으면 그때 한 번 돌린다.
+     *
+     * <p>한글 이름이 없으면 돌리지 않는다. 등록명이 전부 한글이라 영문명으로는 어차피 0건이고,
+     * 그 0건이 "검색 결과 없음"으로 기록되면 사람이 잘못된 근거를 보게 된다.
+     */
     public Optional<FunctionalScreening> findOrScreen(String productId) {
         if (!properties.isEnabled()) {
             return Optional.empty();
         }
-        return Optional.of(repository.findByProductId(productId).orElseGet(() -> screen(productId)));
+        Optional<FunctionalScreening> saved = repository.findByProductId(productId);
+        if (saved.isPresent()) {
+            return saved;
+        }
+        ProductResult product = productService.getProduct(productId);
+        if (product.nameKo() == null || product.nameKo().isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(screen(product));
+    }
+
+    /**
+     * 어드민이 직접 저장했음을 판정 기록에 남긴다.
+     *
+     * <p>{@code decidedBy}를 남기는 이유: 기능성은 규제 정보라 "이 제품이 왜 이렇게 기록됐나"를
+     * 되짚을 수 있어야 하고, 자동이 틀렸던 건들을 모아 규칙을 고칠 때도 이 표시가 열쇠가 된다.
+     */
+    public void markDecidedByAdmin(String productId) {
+        repository.findByProductId(productId).ifPresent(screening -> repository.save(
+                new FunctionalScreening(screening.productId(), screening.outcome(), screening.claims(),
+                        screening.candidates(), screening.selectedIndex(), screening.confidence(),
+                        screening.reason(), screening.brandRegistryCount(),
+                        FunctionalScreening.DECIDED_BY_ADMIN, screening.engineVersion(), Instant.now())));
     }
 
     /**
@@ -116,6 +143,9 @@ public class FunctionalScreeningService {
         Map<ScreeningOutcome, Integer> summary = new LinkedHashMap<>();
         var page = productService.getProducts(List.of(ProductStatus.INGREDIENTS_ADDED), null, 0, Math.max(limit, 1));
         for (ProductResult product : page.content()) {
+            if (product.nameKo() == null || product.nameKo().isBlank()) {
+                continue; // 한글 이름이 없으면 조회할 근거가 없다.
+            }
             FunctionalScreening screening = screen(product);
             summary.merge(screening.outcome(), 1, Integer::sum);
         }
@@ -133,7 +163,7 @@ public class FunctionalScreeningService {
             screening = decide(target);
         } catch (RuntimeException e) {
             // 조회·판정 실패는 "기능성 아님"이 아니다. 사유만 남기고 큐에 그대로 둔다.
-            log.warn("기능성 자동 판정 실패 productId={} : {}", target.id(), e.toString());
+            log.warn("기능성 자동 판정 실패 productId={}", target.id(), e);
             screening = FunctionalScreening.failed(target.id(), "조회 중 오류: " + e.getMessage());
         }
         repository.save(screening);

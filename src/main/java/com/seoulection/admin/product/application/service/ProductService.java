@@ -105,6 +105,16 @@ public class ProductService {
         return result;
     }
 
+    /**
+     * 성분별 보완 완료 — 여기서 상태가 INGREDIENTS_ADDED 로 넘어간다.
+     *
+     * <p>전성분 저장({@link #reviewIngredients})과 나눠 둔 이유는 {@code Product} 쪽 주석 참조.
+     */
+    public ProductResult completeIngredientReview(String id) {
+        Product product = repository.findById(id);
+        return ProductResult.from(repository.save(product.completeIngredientReview()));
+    }
+
     /** 2단계 검수 — 식약처 기능성만 저장한다. 빈 목록은 "확인했으나 기능성 아님"이다. */
     public ProductResult reviewFunction(String id, List<String> function) {
         Product product = repository.findById(id);

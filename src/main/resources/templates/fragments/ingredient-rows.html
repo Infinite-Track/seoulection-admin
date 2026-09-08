@@ -13,23 +13,31 @@
                 <div>
                 <h2>성분별 보완<span class="count-inline" th:text="${productIngredients.size()}"></span></h2>
                 <p class="card-subtitle">
-                    사전 미연결
-                    <strong th:text="${#lists.size(productIngredients.?[!matched()])}">0</strong>건 —
-                    연결되지 않은 성분은 추천 계산에 쓰이지 않습니다.
+                    보완 대상
+                    <strong th:text="${#lists.size(productIngredients.?[matched()])}">0</strong>건 /
+                    사전 미연결 <strong th:text="${#lists.size(productIngredients.?[!matched()])}">0</strong>건 —
+                    <b>성분 사전에 연결된 성분만</b> 함량·특성을 입력합니다. 미연결 성분은 추천 계산에
+                    쓰이지 않아 지금 채워 둘 값이 없습니다.
                 </p>
                 </div>
                 <a class="btn-ghost" href="/admin/ingredients">성분 사전</a>
             </div>
 
-            <div class="form-section" th:each="row : ${productIngredients}">
+            <div class="form-section" th:if="${productIngredients.?[matched()].isEmpty()}">
+                <p class="pending">
+                    성분 사전에 연결된 성분이 없어 보완할 항목이 없습니다.
+                    아래 목록의 성분을 <a class="text-link" href="/admin/ingredients">성분 사전</a>에
+                    먼저 추가하면 여기에 입력 칸이 생깁니다.
+                </p>
+            </div>
+
+            <div class="form-section" th:each="row : ${productIngredients}" th:if="${row.matched()}">
                 <form th:action="@{'/admin/products/' + ${product.id} + '/ingredients/' + ${row.id}}" method="post">
                 <div class="row-head">
                     <span class="order-badge" th:text="${row.order}">1</span>
                     <strong th:text="${row.displayName()}">성분명</strong>
-                    <span class="data-chip is-success" th:if="${row.matched()}"
-                          th:text="'사전 연결 · ' + ${row.matchedInciName}">사전 연결</span>
-                    <span class="data-chip is-warning" th:unless="${row.matched()}">사전에 없음</span>
-                    <span class="raw-name" th:if="${row.matched()}" th:text="'원문: ' + ${row.rawName}"></span>
+                    <span class="data-chip is-success" th:text="'사전 연결 · ' + ${row.matchedInciName}">사전 연결</span>
+                    <span class="raw-name" th:text="'원문: ' + ${row.rawName}"></span>
                 </div>
 
                 <div class="form-grid">
@@ -53,35 +61,63 @@
                 </div>
 
                 <!--
-                  특성은 property_definition 에 정의된 것만 입력할 수 있다. 정의를 거치게 하면
-                  오타로 만들어진 유령 키가 생기지 않고, 화면이 단위까지 자동으로 안내한다.
+                  특성은 정의된 키 중에서 <b>고른 것만</b> 칸을 만든다.
+                  전에는 정의 전체를 늘어놓았는데, 정의가 늘수록 대부분 비어 있는 칸이 길게
+                  깔려서 무엇을 채워야 하는지가 오히려 안 보였다. 성분마다 실제로 적을 특성은
+                  한둘이다.
                 -->
                 <div class="form-section" th:if="${propertyDefinitions != null && !propertyDefinitions.isEmpty()}">
                     <span class="field-label">이 제품에서의 특성</span>
-                    <div class="form-grid">
-                        <div class="field" th:each="def : ${propertyDefinitions}">
-                        <label th:text="${def.displayNameKo} + (${def.valueUnit} != null ? ' (' + ${def.valueUnit} + ')' : '')">특성</label>
-                        <input type="hidden" name="propertyKey" th:value="${def.propertyKey}">
-                        <!-- 수치형이면 범위 두 칸, 범주형이면 텍스트 한 칸. value_type 이 그걸 정한다. -->
-                        <div class="inline-pair" th:if="${def.numeric()}">
-                            <input type="number" step="any" name="propertyValueMin"
-                                   th:value="${row.properties.?[propertyKey == __${def.propertyKey}__].isEmpty() ? null : row.properties.^[propertyKey == __${def.propertyKey}__].valueMin}"
-                                   placeholder="최소">
-                            <input type="number" step="any" name="propertyValueMax"
-                                   th:value="${row.properties.?[propertyKey == __${def.propertyKey}__].isEmpty() ? null : row.properties.^[propertyKey == __${def.propertyKey}__].valueMax}"
-                                   placeholder="최대">
-                            <input type="hidden" name="propertyValueText" value="">
-                        </div>
-                        <div th:unless="${def.numeric()}">
-                            <input type="text" name="propertyValueText"
-                                   th:value="${row.properties.?[propertyKey == __${def.propertyKey}__].isEmpty() ? null : row.properties.^[propertyKey == __${def.propertyKey}__].valueText}"
-                                   th:placeholder="${def.description}">
-                            <input type="hidden" name="propertyValueMin" value="">
-                            <input type="hidden" name="propertyValueMax" value="">
-                        </div>
+
+                    <!--
+                      ⚠️ 이 빈 한 벌을 지우지 말 것. 컨트롤러는 propertyKey 파라미터가 아예
+                         없으면 "특성 칸이 없는 폼"으로 보고 기존 특성을 건드리지 않는다. 그래서
+                         마지막 특성을 지우고 저장하면 삭제가 반영되지 않는다. 빈 키는 무시되므로
+                         값에는 영향이 없고, 네 칸을 모두 두어야 인덱스 짝이 어긋나지 않는다.
+                    -->
+                    <input type="hidden" name="propertyKey" value="">
+                    <input type="hidden" name="propertyValueText" value="">
+                    <input type="hidden" name="propertyValueMin" value="">
+                    <input type="hidden" name="propertyValueMax" value="">
+
+                    <div class="property-list" data-property-list>
+                        <div class="property-item" th:each="prop : ${row.properties}"
+                             th:attr="data-key=${prop.propertyKey}">
+                            <div class="property-head">
+                                <strong th:text="${prop.displayNameKo} ?: ${prop.propertyKey}">특성</strong>
+                                <span class="optional-mark" th:if="${prop.valueUnit != null}"
+                                      th:text="${prop.valueUnit}"></span>
+                                <button type="button" class="btn-ghost" data-property-remove>삭제</button>
+                            </div>
+                            <input type="hidden" name="propertyKey" th:value="${prop.propertyKey}">
+                            <div class="inline-pair" th:if="${prop.numeric()}">
+                                <input type="number" step="any" name="propertyValueMin"
+                                       th:value="${prop.valueMin}" placeholder="최소">
+                                <input type="number" step="any" name="propertyValueMax"
+                                       th:value="${prop.valueMax}" placeholder="최대">
+                                <input type="hidden" name="propertyValueText" value="">
+                            </div>
+                            <div th:unless="${prop.numeric()}">
+                                <input type="text" name="propertyValueText" th:value="${prop.valueText}">
+                                <input type="hidden" name="propertyValueMin" value="">
+                                <input type="hidden" name="propertyValueMax" value="">
+                            </div>
                         </div>
                     </div>
-                    <p class="form-help">빈 칸은 저장하지 않습니다 — 값을 지우면 그 특성이 삭제됩니다.</p>
+
+                    <div class="property-add">
+                        <select data-property-picker>
+                            <option value="">특성 선택…</option>
+                            <option th:each="def : ${propertyDefinitions}" th:value="${def.propertyKey}"
+                                    th:attr="data-label=${def.displayNameKo},
+                                             data-numeric=${def.numeric()},
+                                             data-unit=${def.valueUnit} ?: '',
+                                             data-desc=${def.description} ?: ''"
+                                    th:text="${def.displayNameKo}">특성</option>
+                        </select>
+                        <button type="button" class="btn-ghost" data-property-add>특성 추가</button>
+                    </div>
+                    <p class="form-help">빈 칸은 저장하지 않습니다 — 값을 지우거나 삭제하면 그 특성이 사라집니다.</p>
                 </div>
                 <div class="empty" th:if="${propertyDefinitions == null || propertyDefinitions.isEmpty()}">
                     <span>정의된 특성이 없습니다. <a href="/admin/ingredients/properties">특성 정의</a>에서 먼저 추가하세요.</span>
@@ -95,5 +131,82 @@
                 <button class="btn-primary" type="submit">이 성분 저장</button>
                 </form>
             </div>
+
+            <div class="form-section readonly-section" th:if="${!productIngredients.?[!matched()].isEmpty()}">
+                <div class="form-section-title">
+                    사전에 없어 보완하지 않는 성분
+                    <span class="optional-mark" th:text="${#lists.size(productIngredients.?[!matched()])} + '건'"></span>
+                </div>
+                <div class="chip-list">
+                    <span class="data-chip is-warning" th:each="row : ${productIngredients}"
+                          th:unless="${row.matched()}" th:text="${row.rawName}"></span>
+                </div>
+                <p class="form-help">
+                    사전에 추가하면 다음 저장부터 자동으로 연결돼 이 화면에 입력 칸이 생깁니다.
+                    <a class="text-link" href="/admin/ingredients">성분 사전에서 추가</a>
+                </p>
+            </div>
         </section>
+
+<script>
+    (() => {
+        // 특성 추가/삭제. 서버는 propertyKey[] · propertyValueText[] · propertyValueMin[] ·
+        // propertyValueMax[] 를 인덱스로 짝지어 읽으므로, 블록 하나에 네 칸을 항상 함께 둔다.
+        // 하나라도 빠지면 그 뒤 특성들의 값이 통째로 밀린다.
+        const buildItem = (option) => {
+            const numeric = option.dataset.numeric === 'true';
+            const unit = option.dataset.unit || '';
+            const item = document.createElement('div');
+            item.className = 'property-item';
+            item.dataset.key = option.value;
+            item.innerHTML = `
+                <div class="property-head">
+                    <strong></strong>
+                    <span class="optional-mark"></span>
+                    <button type="button" class="btn-ghost" data-property-remove>삭제</button>
+                </div>
+                <input type="hidden" name="propertyKey">
+                ${numeric ? `
+                <div class="inline-pair">
+                    <input type="number" step="any" name="propertyValueMin" placeholder="최소">
+                    <input type="number" step="any" name="propertyValueMax" placeholder="최대">
+                    <input type="hidden" name="propertyValueText" value="">
+                </div>` : `
+                <div>
+                    <input type="text" name="propertyValueText">
+                    <input type="hidden" name="propertyValueMin" value="">
+                    <input type="hidden" name="propertyValueMax" value="">
+                </div>`}`;
+            // textContent 로 넣는다 — 특성 이름·설명은 DB 값이라 innerHTML 로 붙이면 안 된다.
+            item.querySelector('strong').textContent = option.dataset.label || option.value;
+            item.querySelector('.optional-mark').textContent = unit;
+            item.querySelector('input[name="propertyKey"]').value = option.value;
+            const text = item.querySelector('input[name="propertyValueText"][type="text"]');
+            if (text) text.placeholder = option.dataset.desc || '';
+            return item;
+        };
+
+        document.querySelectorAll('.property-add').forEach((box) => {
+            const picker = box.querySelector('[data-property-picker]');
+            const list = box.parentElement.querySelector('[data-property-list]');
+            box.querySelector('[data-property-add]').addEventListener('click', () => {
+                const option = picker.selectedOptions[0];
+                if (!option || !option.value) return;
+                // 같은 특성을 두 번 담으면 저장할 때 뒤엣것만 남는다 — 있으면 그 칸으로 보낸다.
+                const existing = list.querySelector(`.property-item[data-key="${option.value}"]`);
+                if (existing) {
+                    existing.querySelector('input:not([type=hidden])')?.focus();
+                    return;
+                }
+                list.appendChild(buildItem(option));
+                picker.value = '';
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-property-remove]');
+            if (button) button.closest('.property-item').remove();
+        });
+    })();
+</script>
 </th:block>

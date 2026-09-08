@@ -10,6 +10,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -19,9 +20,10 @@ import java.util.Map;
 /**
  * 의약품안전나라(data.go.kr) 기능성화장품 조회 클라이언트.
  *
- * <p>URL을 문자열로 조립하는 이유: 서비스 키가 이미 URL 인코딩된 상태로 발급되는데
- * ({@code ...%2FXm1Lv...%3D%3D}) {@code RestClient}의 uri 템플릿에 넣으면 {@code %}가 한 번
- * 더 인코딩돼 인증이 깨진다. 키는 받은 그대로 붙이고, 검색어만 직접 인코딩한다.
+ * <p>URL을 문자열로 조립해 {@code URI.create}로 넘기는 이유: 서비스 키가 이미 URL 인코딩된
+ * 상태로 발급되는데({@code ...%2FXm1Lv...%3D%3D}) {@code RestClient}의 uri 템플릿에 문자열로
+ * 넣으면 {@code %2F}가 {@code %252F}로 한 번 더 인코딩돼 403 "등록되지 않은 서비스키"가 난다.
+ * 키는 받은 그대로 붙이고, 검색어만 직접 인코딩한다.
  *
  * <p>심사(1471057)와 보고(1471000)는 응답 스키마가 다르다. 심사 쪽엔 효능효과(EE_NAME)가
  * 없어서 기능성 유형을 도출할 수 없다 — 그래서 심사에서만 발견된 제품은 "기능성이긴 하다"까지만
@@ -80,7 +82,10 @@ public class MfdsCatalogClient implements MfdsCatalogPort {
                 + "&type=json&pageNo=" + page + "&numOfRows=" + rows
                 + "&item_name=" + URLEncoder.encode(itemName, StandardCharsets.UTF_8);
 
-        Map<String, Object> response = client.get().uri(url).retrieve().body(Map.class);
+        // ⚠️ uri(String)을 쓰면 안 된다. RestClient가 그걸 URI 템플릿으로 보고 한 번 더 인코딩해서
+        //    이미 인코딩된 서비스 키의 %2F가 %252F가 되고 403 "등록되지 않은 서비스키"로 튕긴다.
+        //    URI.create로 넘겨 조립한 문자열을 그대로 쓰게 한다.
+        Map<String, Object> response = client.get().uri(URI.create(url)).retrieve().body(Map.class);
         Map<String, Object> header = asMap(response == null ? null : response.get("header"));
         String resultCode = header == null ? null : String.valueOf(header.get("resultCode"));
         if (resultCode != null && !"00".equals(resultCode)) {

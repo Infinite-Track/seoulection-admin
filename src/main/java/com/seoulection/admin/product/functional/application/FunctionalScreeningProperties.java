@@ -53,7 +53,12 @@ public class FunctionalScreeningProperties {
     public Llm getLlm() { return llm; }
 
     public static class Mfds {
-        /** data.go.kr 발급 키(URL 인코딩된 값 그대로). 비어 있으면 조회가 전부 FAILED로 남는다. */
+        /**
+         * data.go.kr 발급 키. 심사·보고 두 서비스가 같은 키를 쓴다.
+         *
+         * <p>URL 인코딩된 형태 그대로 넣는다({@code ...%2FXm1Lv...%3D%3D}).
+         * 비어 있으면 조회가 전부 FAILED로 남는다.
+         */
         private String serviceKey = "";
         private String reportUrl = "https://apis.data.go.kr/1471000/FtnltCosmRptPrdlstInfoService/getRptPrdlstInq";
         private String examUrl = "https://apis.data.go.kr/1471057/FtnltCosmSrngPrdlstInfoService04/getSrngPrdlstInq";
@@ -81,10 +86,30 @@ public class FunctionalScreeningProperties {
 
     public static class Llm {
         private boolean enabled = false;
-        private String model = "claude-opus-5";
+
+        /** Gemini 모델. 이름 표기 변환·후보 판정은 무거운 추론이 아니라 flash로 충분하다. */
+        private String model = "gemini-3.8-flash";
+
+        /** Google AI Studio 발급 키. 비어 있으면 LLM 호출을 건너뛰고 규칙만으로 판정한다. */
+        private String apiKey = "";
+
+        /** Gemini Interactions API 엔드포인트. */
+        private String baseUrl = "https://generativelanguage.googleapis.com/v1beta/interactions";
+
+        private int connectTimeoutMs = 5000;
+        private int readTimeoutMs = 20000;
+
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
         public String getModel() { return model; }
         public void setModel(String model) { this.model = model; }
+        public String getApiKey() { return apiKey; }
+        public void setApiKey(String apiKey) { this.apiKey = apiKey; }
+        public String getBaseUrl() { return baseUrl; }
+        public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
+        public int getConnectTimeoutMs() { return connectTimeoutMs; }
+        public void setConnectTimeoutMs(int value) { this.connectTimeoutMs = value; }
+        public int getReadTimeoutMs() { return readTimeoutMs; }
+        public void setReadTimeoutMs(int value) { this.readTimeoutMs = value; }
     }
 }

@@ -57,7 +57,7 @@ public class JdbcProductIngredientAdapter implements ProductIngredientPort {
         // 특성은 행마다 개수가 달라 한 번에 모아 두고 붙인다(성분 30개에 쿼리 30번을 더 쏘지 않는다).
         Map<Long, List<ProductIngredientProperty>> properties = new LinkedHashMap<>();
         jdbc.query("""
-                select p.product_ingredient_id, p.property_key, d.display_name_ko,
+                select p.product_ingredient_id, p.property_key, d.display_name_ko, d.value_type,
                        p.value_text, p.value_min, p.value_max, p.value_unit, p.notes
                 from product_ingredient_property p
                 join product_ingredient pi on pi.id = p.product_ingredient_id
@@ -66,7 +66,8 @@ public class JdbcProductIngredientAdapter implements ProductIngredientPort {
                 """, rs -> {
             properties.computeIfAbsent(rs.getLong("product_ingredient_id"), k -> new ArrayList<>())
                     .add(new ProductIngredientProperty(rs.getString("property_key"), rs.getString("display_name_ko"),
-                            rs.getString("value_text"), rs.getBigDecimal("value_min"), rs.getBigDecimal("value_max"),
+                            rs.getString("value_type"), rs.getString("value_text"),
+                            rs.getBigDecimal("value_min"), rs.getBigDecimal("value_max"),
                             rs.getString("value_unit"), rs.getString("notes")));
         }, productId);
 

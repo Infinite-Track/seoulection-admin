@@ -5,6 +5,7 @@ import com.seoulection.admin.product.application.dto.ProductResult;
 import com.seoulection.admin.product.application.service.ProductService;
 import com.seoulection.admin.product.domain.enums.ProductStage;
 import com.seoulection.admin.product.domain.enums.ProductStatus;
+import com.seoulection.admin.product.functional.application.FunctionalScreeningService;
 import com.seoulection.admin.product.presentation.controller.ProductController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +41,10 @@ class ProductControllerTest {
 
     @MockitoBean
     ProductService service;
+
+    /** 컨트롤러가 자동 조회를 부르지만 이 테스트가 보는 건 검수 폼의 규칙이다 — 대역으로 둔다. */
+    @MockitoBean
+    FunctionalScreeningService screeningService;
 
     @BeforeEach
     void stubList() {

@@ -40,9 +40,7 @@ public class SurveyAdminController {
         if (!model.containsAttribute("questionRequest")) {
             model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
         }
-        model.addAttribute("questions", service.getQuestions());
-        model.addAttribute("evidenceByQuestion", evidenceService.byQuestion());
-        model.addAttribute("sourceTypes", java.util.List.of("PAPER", "GUIDELINE", "CLINICAL", "ARTICLE", "INTERNAL"));
+        populateSurveyModel(model);
         return "survey";
     }
 
@@ -57,7 +55,7 @@ public class SurveyAdminController {
                                  RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("request", new SurveyOptionCreateRequest());
-            model.addAttribute("questions", service.getQuestions());
+            populateSurveyModel(model);
             model.addAttribute("questionFormOpen", true);
             return "survey";
         }
@@ -67,7 +65,7 @@ public class SurveyAdminController {
         } catch (IllegalArgumentException e) {
             bindingResult.rejectValue("questionKey", "invalid", e.getMessage());
             model.addAttribute("request", new SurveyOptionCreateRequest());
-            model.addAttribute("questions", service.getQuestions());
+            populateSurveyModel(model);
             model.addAttribute("questionFormOpen", true);
             return "survey";
         }
@@ -82,7 +80,7 @@ public class SurveyAdminController {
                                RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
-            model.addAttribute("questions", service.getQuestions());
+            populateSurveyModel(model);
             model.addAttribute("optionFormOpen", true);
             return "survey";
         }
@@ -94,7 +92,7 @@ public class SurveyAdminController {
             // 코드 중복·형식 위반은 사용자가 고칠 수 있는 입력 오류다 → 폼으로 되돌려 사유를 보여준다.
             bindingResult.rejectValue("code", "invalid", e.getMessage());
             model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
-            model.addAttribute("questions", service.getQuestions());
+            populateSurveyModel(model);
             model.addAttribute("optionFormOpen", true);
             return "survey";
         }
@@ -149,8 +147,9 @@ public class SurveyAdminController {
     // 설문이 "근거 기반"이어야 한다는 요구. 문항 하나에 근거 여러 개가 붙는다(1:N) —
     // 논문 하나로 시작해도 나중에 가이드라인·임상 자료가 붙는다.
 
-    @PostMapping("/admin/survey/questions/{questionKey}/evidence")
-    public String addEvidence(@PathVariable String questionKey,
+    /** 드로어에서 문항을 골라 추가한다 — 문항 카드마다 폼을 두면 같은 폼이 문항 수만큼 반복된다. */
+    @PostMapping("/admin/survey/evidence")
+    public String addEvidence(@RequestParam String questionKey,
                               @RequestParam String title,
                               @RequestParam String rationale,
                               @RequestParam(required = false) String url,
@@ -162,6 +161,8 @@ public class SurveyAdminController {
             redirectAttributes.addFlashAttribute("successMessage", "근거를 추가했습니다.");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            // 실패하면 드로어를 다시 열어 준다 — 닫히면 사용자가 입력한 것이 어디로 갔는지 알 수 없다.
+            redirectAttributes.addFlashAttribute("evidenceFormOpen", true);
         }
         return "redirect:/admin/survey";
     }
@@ -189,4 +190,23 @@ public class SurveyAdminController {
         redirectAttributes.addFlashAttribute("successMessage", "근거를 삭제했습니다.");
         return "redirect:/admin/survey";
     }
+
+    /**
+     * survey 템플릿이 항상 필요로 하는 것.
+     *
+     * <p>🔴 {@code return "survey"} 가 다섯 군데 있다(정상 렌더 하나 + 검증 실패 네 군데).
+     * 한 곳만 빠뜨리면 그 경로에서만 템플릿이 터지고, 화면에는 500 만 보인다 —
+     * 정상 흐름은 멀쩡해서 테스트로도, 눈으로도 잘 안 걸린다.
+     * 2026-09-08 근거 목록을 GET 에만 넣어 "중복 문항 키" 경로가 500 이 됐다.
+     * 모델을 손으로 채우지 말고 이 메서드를 부를 것.
+     */
+    private void populateSurveyModel(Model model) {
+        model.addAttribute("questions", service.getQuestions());
+        model.addAttribute("evidenceByQuestion", evidenceService.byQuestion());
+        model.addAttribute("sourceTypes", SOURCE_TYPES);
+    }
+
+    /** 마이그레이션의 CHECK 제약과 같은 집합. 화면의 select 가 이걸로 그려진다. */
+    private static final java.util.List<String> SOURCE_TYPES =
+            java.util.List.of("PAPER", "GUIDELINE", "CLINICAL", "ARTICLE", "INTERNAL");
 }
