@@ -253,16 +253,10 @@ public class ProductController {
                     "성분을 입력하거나, 찾지 못한 경우 '성분을 찾지 못함'을 선택해 주세요.");
             return "redirect:/admin/products/" + id + "/workflow";
         }
-        // 한글 이름은 전성분과 같은 폼에서 받는다 — 한 화면에서 하는 일을 두 번 저장하게 만들지 않는다.
-        // 비워 두면 기존 값을 유지한다(지우려는 의도와 구분할 수 없어 덮어쓰지 않는다).
-        String nameKo = request.getNameKo();
-        if (nameKo != null && !nameKo.isBlank()) {
-            var current = service.getProduct(id);
-            service.updateBasicInfo(id, current.name(), nameKo.trim(), current.brand(), current.category());
-        }
         service.reviewIngredients(id, ingredients, ingredientNotFound);
-        redirectAttributes.addFlashAttribute("successMessage", "전성분을 저장했습니다.");
-        return "redirect:/admin/products?stage=ingredient-review";
+        redirectAttributes.addFlashAttribute("successMessage", "전성분을 저장했습니다. 이어서 함량을 입력하세요.");
+        // 성분을 찾지 못한 제품은 채울 함량이 없다 → 함량 단계를 건너뛴다.
+        return "redirect:/admin/products/" + id + "/workflow?step=" + (ingredientNotFound ? "name" : "concentrations");
     }
 
     /** 2단계 저장 — 식약처 기능성만. 저장 후 기능성 확인 큐로 돌아간다. */
@@ -284,6 +278,43 @@ public class ProductController {
         service.reviewFunction(id, confirmed ? request.getFunction() : List.of());
         redirectAttributes.addFlashAttribute("successMessage", "기능성 검수 정보를 저장했습니다.");
         return "redirect:/admin/products?stage=functional-review";
+    }
+
+    /**
+     * 검수 단계 순서. 화면의 단계 표시와 "다음" 이동이 이 순서를 따른다.
+     *
+     * <p>순서가 이 모양인 이유: 함량은 성분이 있어야 채울 수 있고, 기능성 확인은 성분을 보고
+     * 판단한다. 한글 이름은 성분과 무관하지만 기능성보다 가벼워 앞에 둔다.
+     */
+    private static final List<String> WORKFLOW_STEPS = List.of("ingredients", "concentrations", "name", "functional");
+
+    /** 다음 단계 경로. 마지막 단계면 null 이다. */
+    private String nextStep(String current) {
+        int index = WORKFLOW_STEPS.indexOf(current);
+        return index < 0 || index + 1 >= WORKFLOW_STEPS.size() ? null : WORKFLOW_STEPS.get(index + 1);
+    }
+
+    /** 2단계 — 함량·특성은 행마다 따로 저장한다(조각 안의 폼). 여기서는 다음 단계로만 넘긴다. */
+    @PostMapping("/admin/products/{id}/workflow/concentrations")
+    public String workflowConcentrations(@PathVariable String id, RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("successMessage", "함량 입력을 마쳤습니다.");
+        return "redirect:/admin/products/" + id + "/workflow?step=name";
+    }
+
+    /**
+     * 3단계 — 제품 한글 이름. MongoDB {@code products.name_ko} 에 저장된다.
+     *
+     * <p>비워 두면 기존 값을 유지한다 — 지우려는 의도와 구분할 수 없어 덮어쓰지 않는다.
+     */
+    @PostMapping("/admin/products/{id}/workflow/name")
+    public String workflowName(@PathVariable String id, @RequestParam(required = false) String nameKo,
+                               RedirectAttributes redirectAttributes) {
+        if (nameKo != null && !nameKo.isBlank()) {
+            var current = service.getProduct(id);
+            service.updateBasicInfo(id, current.name(), nameKo.trim(), current.brand(), current.category());
+            redirectAttributes.addFlashAttribute("successMessage", "한글 이름을 저장했습니다.");
+        }
+        return "redirect:/admin/products/" + id + "/workflow?step=functional";
     }
 
     /**
@@ -309,14 +340,23 @@ public class ProductController {
         request.setIngredientsText(product.ingredients() == null ? "" : String.join(", ", product.ingredients()));
         model.addAttribute("product", product);
         model.addAttribute("request", request);
-        String resolved = "ingredients".equals(step) || "functional".equals(step)
-                ? step
-                : product.status().workflowStep();
+        // 4단계 마법사: 성분 → 함량 → 한글 이름 → 기능성.
+        // step 이 없으면 제품 상태가 진입점을 정한다(status.workflowStep()).
+        // ⚠️ step == null 검사를 빼지 말 것. List.of() 는 불변 리스트라 contains(null) 이
+        //    false 가 아니라 NullPointerException 이다(step 파라미터는 대개 없다).
+        String resolved = step != null && WORKFLOW_STEPS.contains(step)
+                ? step : product.status().workflowStep();
         if (resolved == null) {
             // 파이프라인이 굴리는 중이거나 이미 끝난 제품은 어드민이 할 일이 없다 — 상세로 보낸다.
             return "redirect:/admin/products/" + id;
         }
         model.addAttribute("workflowStep", resolved);
+        model.addAttribute("workflowSteps", WORKFLOW_STEPS);
+        model.addAttribute("workflowStepIndex", WORKFLOW_STEPS.indexOf(resolved));
+        if ("concentrations".equals(resolved)) {
+            model.addAttribute("productIngredients", service.getProductIngredients(id));
+            model.addAttribute("propertyDefinitions", service.propertyDefinitions());
+        }
         return "product-workflow";
     }
 }

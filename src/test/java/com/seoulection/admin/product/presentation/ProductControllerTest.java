@@ -350,7 +350,7 @@ class ProductControllerTest {
                         .param("ingredientResolution", "FOUND")
                         .param("ingredientsText", "Water, Glycerin"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/products?stage=ingredient-review"));
+                .andExpect(redirectedUrl("/admin/products/abc/workflow?step=concentrations"));
 
         then(service).should().reviewIngredients("abc", List.of("Water", "Glycerin"), false);
     }
