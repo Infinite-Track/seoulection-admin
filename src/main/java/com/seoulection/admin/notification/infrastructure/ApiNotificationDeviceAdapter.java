@@ -3,7 +3,6 @@ package com.seoulection.admin.notification.infrastructure;
 import com.seoulection.admin.notification.application.NotificationDevicePort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -22,13 +21,11 @@ public class ApiNotificationDeviceAdapter implements NotificationDevicePort {
     private final String serviceKey;
 
     public ApiNotificationDeviceAdapter(
+            RestClient.Builder builder,
             @Value("${admin.notification-service.base-url:http://notification-service:8080}") String baseUrl,
             @Value("${admin.notification-service.service-key:}") String serviceKey) {
         this.serviceKey = serviceKey;
-        var factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5000);
-        factory.setReadTimeout(10000);
-        this.client = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
+        this.client = builder.baseUrl(baseUrl).build();
     }
 
     @Override

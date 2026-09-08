@@ -1,6 +1,6 @@
 package com.seoulection.admin.notification.presentation;
 
-import com.seoulection.admin.notification.application.NotificationDevicePort;
+import com.seoulection.admin.notification.application.NotificationDeviceService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
 
 /**
  * 기기 토큰 관리 화면.
@@ -23,17 +22,16 @@ import java.util.List;
 @Controller
 public class NotificationDeviceController {
 
-    private final NotificationDevicePort devicePort;
+    private final NotificationDeviceService service;
 
-    public NotificationDeviceController(NotificationDevicePort devicePort) {
-        this.devicePort = devicePort;
+    public NotificationDeviceController(NotificationDeviceService service) {
+        this.service = service;
     }
 
     @GetMapping("/admin/notifications/devices")
     public String page(@RequestParam(required = false) Long userId, Model model) {
         model.addAttribute("userId", userId);
-        // userId 가 없으면 조회하지 않는다 — 전체 기기 목록은 어드민이 볼 이유가 없고 양도 많다.
-        model.addAttribute("devices", userId == null ? List.of() : devicePort.activeOf(userId));
+        model.addAttribute("devices", service.activeDevices(userId));
         model.addAttribute("searched", userId != null);
         return "notification-devices";
     }
@@ -41,7 +39,7 @@ public class NotificationDeviceController {
     @PostMapping("/admin/notifications/devices/{registrationId}/revoke")
     public String revoke(@PathVariable Long registrationId, @RequestParam Long userId,
                          RedirectAttributes redirectAttributes) {
-        devicePort.revoke(registrationId);
+        service.revoke(registrationId);
         redirectAttributes.addFlashAttribute("successMessage",
                 "기기 등록을 해제했습니다. 이 기기로는 더 이상 발송되지 않습니다.");
         return "redirect:/admin/notifications/devices?userId=" + userId;

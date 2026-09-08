@@ -8,7 +8,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.client.RestClient;
 
@@ -34,13 +33,13 @@ public class ApiProductIngredientAdapter implements ProductIngredientPort {
     private final String serviceKey;
 
     public ApiProductIngredientAdapter(
+            RestClient.Builder builder,
             @Value("${admin.product-service.base-url:http://product-service:8080}") String baseUrl,
             @Value("${admin.product-service.service-key:}") String serviceKey) {
         this.serviceKey = serviceKey;
-        var factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5000);
-        factory.setReadTimeout(10000);
-        this.client = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
+        // Builder 를 주입받는 이유는 테스트다 — MockRestServiceServer 가 이 빌더에 붙어야
+        // 실제 HTTP 없이 응답 매핑을 검증할 수 있다. 타임아웃은 AdminHttpClientConfig 가 건다.
+        this.client = builder.baseUrl(baseUrl).build();
     }
 
     @Override
@@ -90,16 +89,20 @@ public class ApiProductIngredientAdapter implements ProductIngredientPort {
     private record ReviewBody(String ingredientId, BigDecimal concentrationMin, BigDecimal concentrationMax,
                               String unit, String notes, List<ProductIngredientProperty> properties) {}
 
-    /** V2 응답 모양. 어드민 DTO 와 필드가 달라(matched* 가 없다) 따로 둔다. */
+    /**
+     * V2 응답 모양. 어드민 DTO 와 필드 이름이 갈리므로 따로 둔다.
+     *
+     * <p>⚠️ 필드 이름이 V2 응답과 하나라도 어긋나면 조용히 null 이 되고 화면에는 빈 칸으로만
+     * 보인다. {@code ApiProductIngredientAdapterTest} 가 그 어긋남을 잡는다.
+     */
     private record IngredientRow(long id, String ingredientId, String rawName, Integer order,
                                  BigDecimal concentrationMin, BigDecimal concentrationMax, String unit,
-                                 String notes, String source, List<ProductIngredientProperty> properties) {
+                                 String notes, String source, String inciName, String displayNameKo,
+                                 List<ProductIngredientProperty> properties) {
 
         ProductIngredientResult toResult() {
-            // ⚠️ V2 는 사전의 이름을 함께 주지 않는다 → 매칭 여부만 ingredientId 로 판단한다.
-            //    이름까지 보여주려면 V2 응답에 inciName/displayNameKo 를 추가해야 한다.
             return new ProductIngredientResult(id, ingredientId, rawName, order == null ? 0 : order,
-                    concentrationMin, concentrationMax, unit, notes, null, null,
+                    concentrationMin, concentrationMax, unit, notes, inciName, displayNameKo,
                     properties == null ? List.of() : properties);
         }
     }
