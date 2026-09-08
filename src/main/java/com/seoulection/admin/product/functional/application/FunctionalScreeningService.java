@@ -183,12 +183,19 @@ public class FunctionalScreeningService {
         String brandKo = aliases.isEmpty() ? target.brand() : aliases.get(0);
 
         // 브랜드 전수: 등록 목록 + 업체명 기준값 + "0건"이라는 음성 근거를 한 번에 준다.
-        List<MfdsItem> brandItems = List.of();
+        //
+        // ⚠️ 첫 별칭에서 멈추지 않는다. 표기가 갈리는 브랜드가 실제로 있고("아누아"/"어누아",
+        //    "넘버즈인"/"넘버즈인"), 한 표기로 몇 건 나왔다고 나머지를 안 보면 정작 맞는 제품이
+        //    다른 표기 아래 있을 때 통째로 놓친다. 별칭마다 조회해 합친다.
+        List<MfdsItem> brandItems = new ArrayList<>();
+        int bestHits = 0;
         for (String alias : aliases) {
-            brandItems = mfdsCatalog.searchBrand(alias);
-            if (!brandItems.isEmpty()) {
+            List<MfdsItem> found = mfdsCatalog.searchBrand(alias);
+            brandItems.addAll(found);
+            // 이름 비교의 기준이 될 표기는 가장 많이 걸린 것으로 둔다 — 그게 실제 등록 표기다.
+            if (found.size() > bestHits) {
+                bestHits = found.size();
                 brandKo = alias;
-                break;
             }
         }
         String brandEntpName = dominantEntpName(brandItems);
@@ -198,36 +205,62 @@ public class FunctionalScreeningService {
             pool.addAll(mfdsCatalog.searchByItemName(term));
         }
 
-        List<MfdsCandidate> candidates = rank(pool, target, brandKo, brandEntpName);
         long brandCount = brandItems.size();
-
-        if (candidates.isEmpty()) {
+        List<MfdsCandidate> scored = score(pool, target, brandKo, brandEntpName);
+        if (scored.isEmpty()) {
             // 브랜드 전수를 한글 표기로 못 돌렸으면 "0건"이 음성 근거가 되지 못한다 —
             // 등록명은 전부 한글이라 영문 브랜드명으로 조회하면 무조건 0건이 나온다.
             return noCandidate(target, brandCount, containsHangul(brandKo));
         }
 
-        MfdsCandidate top = candidates.get(0);
-        if (top.confirmable(properties.getAutoThreshold()) && !top.partialNameMatch()) {
-            return confirmed(target, candidates, 0, "등록명이 거의 일치합니다", brandCount);
+        // 유사도만으로 확실한 것들. 여기서 끝나면 판정을 부르지 않는다(호출 비용을 아낀다).
+        List<MfdsCandidate> strong = scored.stream()
+                .filter(candidate -> candidate.score() >= properties.getCandidateThreshold()
+                        || candidate.coverage() >= properties.getCoverageThreshold())
+                .limit(properties.getMaxCandidates())
+                .toList();
+
+        if (!strong.isEmpty() && strong.get(0).confirmable(properties.getAutoThreshold())
+                && !strong.get(0).partialNameMatch()) {
+            return confirmed(target, strong, 0, "등록명이 거의 일치합니다", brandCount);
         }
 
-        // 점수로 못 끝낸 경우에만 판정을 부른다 — 유사도가 못 거르는 것들이 여기 남는다.
-        CandidateVerdict verdict = nameResolver.judge(target, candidates.stream().map(MfdsCandidate::item).toList());
+        // ⚠️ 판정에 <b>임계값을 통과한 것만</b> 넘기지 않는다. 유사도는 표기가 크게 다른 제품을
+        //    통째로 떨어뜨린다 — "토리든 다이브인 저분자 히알루론산 세럼"은 이 브랜드 등록 2건과
+        //    모두 0.5 미만이라, 예전에는 판정이 아예 호출되지 않고 화면엔 "후보 없음"만 떴다.
+        //    브랜드 등록 목록을 점수순으로 넉넉히 넘기고 <b>고르는 일을 판정에 맡긴다</b>.
+        List<MfdsCandidate> reviewed = scored.stream().limit(properties.getJudgePoolSize()).toList();
+        CandidateVerdict verdict = nameResolver.judge(target, reviewed.stream().map(MfdsCandidate::item).toList());
+        List<MfdsCandidate> shown = reviewed.stream().limit(properties.getMaxCandidates()).toList();
+
         if (!verdict.matched()) {
-            return new FunctionalScreening(target.id(), ScreeningOutcome.NEEDS_REVIEW, List.of(), candidates, -1,
-                    verdict.confidence(), "같은 제품으로 볼 후보가 없습니다: " + verdict.reason(),
+            // 판정이 "없다"고 했다. 유사도 높은 후보가 있었으면 사람이 다시 볼 값어치가 있고,
+            // 그것마저 없으면 이 브랜드에 이 제품의 등록이 없다는 쪽에 가깝다. 어느 쪽이든
+            // 무엇을 보고 그렇게 판단했는지는 화면에 남긴다.
+            ScreeningOutcome outcome = strong.isEmpty() ? ScreeningOutcome.NOT_MATCHED : ScreeningOutcome.NEEDS_REVIEW;
+            String head = strong.isEmpty()
+                    ? "이 브랜드 등록 " + brandCount + "건 중 같은 제품을 찾지 못했습니다"
+                    : "같은 제품으로 볼 후보가 없습니다";
+            return new FunctionalScreening(target.id(), outcome, List.of(), shown, -1,
+                    verdict.confidence(), head + ": " + verdict.reason(),
                     brandCount, FunctionalScreening.DECIDED_BY_AUTO, FunctionalScreening.ENGINE_VERSION, Instant.now());
         }
 
-        int index = Math.min(Math.max(verdict.index(), 0), candidates.size() - 1);
-        MfdsCandidate chosen = candidates.get(index);
+        int index = Math.min(Math.max(verdict.index(), 0), reviewed.size() - 1);
+        MfdsCandidate chosen = reviewed.get(index);
+        // 판정이 고른 건이 표시 범위 밖일 수 있다(20개 중 15번째를 골랐다면). 맨 앞에 세운다.
+        List<MfdsCandidate> withChosen = new ArrayList<>();
+        withChosen.add(chosen);
+        shown.stream().filter(candidate -> candidate != chosen)
+                .limit(Math.max(properties.getMaxCandidates() - 1, 0))
+                .forEach(withChosen::add);
+
         if (verdict.high() && chosen.numericMatch() && chosen.brandMatch() && chosen.claims().autoConfirmable()) {
-            return confirmed(target, candidates, index, verdict.reason(), brandCount);
+            return confirmed(target, withChosen, 0, verdict.reason(), brandCount);
         }
         String block = chosen.blockReason();
         return new FunctionalScreening(target.id(), ScreeningOutcome.NEEDS_REVIEW, chosen.claims().categories(),
-                candidates, index, verdict.confidence(),
+                withChosen, 0, verdict.confidence(),
                 block.isBlank() ? "판정 신뢰도가 낮아 확인이 필요합니다: " + verdict.reason() : block,
                 brandCount, FunctionalScreening.DECIDED_BY_AUTO, FunctionalScreening.ENGINE_VERSION, Instant.now());
     }
@@ -291,7 +324,8 @@ public class FunctionalScreeningService {
             if (!aliases.contains(key)) {
                 aliases.add(key);
             }
-            return aliases.stream().filter(value -> value != null && !value.isBlank()).distinct().limit(3).toList();
+            return aliases.stream().filter(value -> value != null && !value.isBlank())
+                    .distinct().limit(properties.getMaxBrandAliases()).toList();
         });
     }
 
@@ -303,7 +337,9 @@ public class FunctionalScreeningService {
                 .map(ItemName::normalize)
                 .forEach(terms::add);
         terms.removeIf(term -> term.length() < 2);
-        return terms.stream().limit(5).toList();
+        // 상한을 두는 건 안전나라 쿼터 때문이지 정확도 때문이 아니다 — 후보가 많을수록 회수율은
+        // 올라간다. 기본 8개는 "정규화 2 + 모델이 만든 표기 변형 여러 개"를 담는 크기다.
+        return terms.stream().limit(properties.getMaxSearchTerms()).toList();
     }
 
     /**
@@ -323,7 +359,14 @@ public class FunctionalScreeningService {
                 .orElse(null);
     }
 
-    private List<MfdsCandidate> rank(List<MfdsItem> pool, ScreeningTarget target, String brandKo, String brandEntpName) {
+    /**
+     * 취하 건을 걸러 내고 중복을 합친 뒤 점수순으로 세운다. <b>임계값은 보지 않는다.</b>
+     *
+     * <p>거르는 일을 여기서 하지 않는 이유: 유사도는 표기가 크게 다른 제품을 통째로 떨어뜨린다.
+     * 무엇을 후보로 볼지는 호출하는 쪽이 정한다.
+     */
+    private List<MfdsCandidate> score(List<MfdsItem> pool, ScreeningTarget target,
+                                      String brandKo, String brandEntpName) {
         String query = target.brandedName(brandKo);
         Map<String, MfdsCandidate> unique = new LinkedHashMap<>();
         for (MfdsItem item : pool) {
@@ -331,13 +374,6 @@ public class FunctionalScreeningService {
                 continue; // 취하된 등록은 근거가 되지 못한다.
             }
             MfdsCandidate candidate = MfdsCandidate.of(item, query, brandKo, brandEntpName);
-            // 점수가 낮아도, 우리가 적은 이름이 등록명에 통째로 들어 있으면 후보로 남긴다.
-            // 어드민이 "달바 워터풀"까지만 적은 경우가 여기다 — 유사도는 0.59라 잘리지만
-            // 정작 맞는 제품이 그 안에 있다.
-            boolean covered = candidate.coverage() >= properties.getCoverageThreshold();
-            if (candidate.score() < properties.getCandidateThreshold() && !covered) {
-                continue;
-            }
             String key = item.source() + "|" + ItemName.normalize(item.itemName()) + "|" + item.entpName();
             unique.merge(key, candidate,
                     (existing, incoming) -> existing.claims().categories().size() >= incoming.claims().categories().size()
@@ -345,7 +381,6 @@ public class FunctionalScreeningService {
         }
         return unique.values().stream()
                 .sorted(Comparator.comparingDouble(MfdsCandidate::score).reversed())
-                .limit(properties.getMaxCandidates())
                 .toList();
     }
 

@@ -127,6 +127,10 @@
                         <p class="form-help" th:if="${screening.brandRegistryCount > 0}"
                            th:text="'이 브랜드의 안전나라 기능성 등록: ' + ${screening.brandRegistryCount} + '건'"></p>
 
+                        <p class="form-help" th:if="${screening.hasCandidates() and screening.outcome.name() == 'NOT_MATCHED'}">
+                            <b>정확히 맞는 등록 건은 없습니다.</b> 아래는 같은 브랜드의 등록 건이라
+                            참고로 보여 드립니다 — 유사도가 낮으니 이름을 직접 견줘 보세요.
+                        </p>
                         <table class="data-table" th:if="${screening.hasCandidates()}">
                             <thead>
                             <tr>
@@ -154,9 +158,12 @@
                                 <td th:text="${#numbers.formatDecimal(candidate.score, 1, 2)}"></td>
                                 <td>
                                     <button type="button" class="button-secondary js-apply-candidate"
+                                            th:if="${!candidate.claims.categories.isEmpty()}"
                                             th:attr="data-claims=${#strings.listJoin(candidate.claims.categories, ',')}">
                                         이 후보로 채우기
                                     </button>
+                                    <span class="pending" th:if="${candidate.claims.categories.isEmpty()}"
+                                          th:text="${candidate.claims.reason()}"></span>
                                 </td>
                             </tr>
                             </tbody>

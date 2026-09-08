@@ -35,6 +35,20 @@ public class FunctionalScreeningProperties {
     private int maxCandidates = 8;
 
     /**
+     * 판정에 넘길 등록 건 수. 화면에 남기는 수보다 넉넉하게 둔다.
+     *
+     * <p>유사도는 표기가 크게 다른 제품을 통째로 떨어뜨린다. 고르는 일을 판정에 맡기려면
+     * 임계값을 통과한 것만이 아니라 <b>브랜드 등록 목록을 그대로</b> 보여 줘야 한다.
+     */
+    private int judgePoolSize = 20;
+
+    /** 브랜드 한글 표기 후보 수. 표기가 갈리는 브랜드가 있어 전부 조회해 합친다. */
+    private int maxBrandAliases = 4;
+
+    /** 등록명 검색어 상한. 상한은 안전나라 쿼터 때문이고, 많을수록 회수율은 올라간다. */
+    private int maxSearchTerms = 8;
+
+    /**
      * "기능성 아님"까지 자동 확정할지. 기본은 꺼짐.
      *
      * <p>검색 실패와 기능성 아님은 겉보기가 같다(둘 다 후보 0건). 브랜드 전수 조회가 0건일
@@ -53,6 +67,12 @@ public class FunctionalScreeningProperties {
     public void setAutoThreshold(double autoThreshold) { this.autoThreshold = autoThreshold; }
     public double getCandidateThreshold() { return candidateThreshold; }
     public void setCandidateThreshold(double candidateThreshold) { this.candidateThreshold = candidateThreshold; }
+    public int getMaxBrandAliases() { return maxBrandAliases; }
+    public void setMaxBrandAliases(int value) { this.maxBrandAliases = value; }
+    public int getMaxSearchTerms() { return maxSearchTerms; }
+    public void setMaxSearchTerms(int value) { this.maxSearchTerms = value; }
+    public int getJudgePoolSize() { return judgePoolSize; }
+    public void setJudgePoolSize(int value) { this.judgePoolSize = value; }
     public double getCoverageThreshold() { return coverageThreshold; }
     public void setCoverageThreshold(double value) { this.coverageThreshold = value; }
     public int getMaxCandidates() { return maxCandidates; }

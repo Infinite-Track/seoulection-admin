@@ -25,7 +25,7 @@ public class ProductDocument {
     private String asin;
 
     private String name;
-    @Field("name_ko")
+    @Field("name_kr")
     private String nameKo;
     private String brand;
     private String category;

@@ -27,7 +27,7 @@ admin:
     apply-decisions: ${FUNCTIONAL_SCREENING_APPLY:false}
     auto-threshold: 0.95        # 이 점수 이상이면 LLM 판정 없이도 확정 후보
     candidate-threshold: 0.60   # 이 미만은 후보로도 남기지 않는다
-    max-candidates: 5
+    max-candidates: 8   # 이름을 일부만 적으면 같은 계열이 여럿 걸린다
     # "기능성 아님"까지 자동 확정할지. 검색 실패와 구분이 어려워 기본은 꺼 둔다 —
     # 브랜드 등록이 0건일 때만 켤 만하고, 선크림처럼 법적으로 기능성이어야 하는 건 제외된다.
     auto-conclude-none: false
