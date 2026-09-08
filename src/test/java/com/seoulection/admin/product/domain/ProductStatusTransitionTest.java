@@ -25,13 +25,45 @@ class ProductStatusTransitionTest {
     }
 
     @Test
-    @DisplayName("성분을 채워 저장하면 기능성 확인 단계로 넘어간다")
-    void fillingIngredientsMovesToFunctionalQueue() {
+    @DisplayName("전성분만 저장해서는 다음 단계로 넘어가지 않는다 — 성분별 보완이 남아 있다")
+    void savingIngredientsAloneDoesNotAdvance() {
         Product reviewed = crawledButTooFew()
                 .reviewIngredients(List.of("Water", "Glycerin", "Niacinamide", "Panthenol", "Ceramide NP"), false);
 
-        assertThat(reviewed.status()).isEqualTo(ProductStatus.INGREDIENTS_ADDED);
-        assertThat(reviewed.ingredientSource()).isEqualTo(Product.ADMIN_SOURCE);
+        // 상태는 저장 전 그대로다 — 어드민 저장이 파이프라인 판정을 지우지도, 다음 단계로
+        // 밀지도 않는다. 앞으로 미는 건 '성분 보완 완료' 뿐이다.
+        assertThat(reviewed.status()).isEqualTo(ProductStatus.INSUFFICIENT_INGREDIENTS);
+        assertThat(reviewed.ingredients()).hasSize(5);
+    }
+
+    @Test
+    @DisplayName("성분별 보완을 마쳐야 성분 입력 완료가 된다")
+    void completingReviewAdvances() {
+        Product reviewed = crawledButTooFew()
+                .reviewIngredients(List.of("Water", "Glycerin", "Niacinamide"), false);
+
+        assertThat(reviewed.completeIngredientReview().status()).isEqualTo(ProductStatus.INGREDIENTS_ADDED);
+    }
+
+    @Test
+    @DisplayName("함량을 하나도 안 채웠어도 완료할 수 있다 — 채울 값이 없는 제품이 있다")
+    void completingWithoutConcentrationsIsAllowed() {
+        Product reviewed = crawledButTooFew().reviewIngredients(List.of("Water"), false);
+
+        assertThat(reviewed.completeIngredientReview().status()).isEqualTo(ProductStatus.INGREDIENTS_ADDED);
+    }
+
+    @Test
+    @DisplayName("성분이 없으면 완료할 수 없다 — 아직 1단계도 끝나지 않았다")
+    void cannotCompleteWithoutIngredients() {
+        Product noIngredients = Product.builder()
+                .name("시카 세럼").brand("서울렉션").category("treatments")
+                .status(ProductStatus.NEED_MANUAL_REVIEW)
+                .build();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(noIngredients::completeIngredientReview)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("전성분");
     }
 
     @Test

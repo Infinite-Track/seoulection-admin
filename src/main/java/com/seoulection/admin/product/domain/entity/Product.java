@@ -27,6 +27,7 @@ public class Product {
     private final String id;
     private final String asin;
     private final String name;
+    private final String nameKo;
     private final String brand;
     private final ProductCategory category;
     private final String description;
@@ -47,6 +48,7 @@ public class Product {
         this.id = builder.id;
         this.asin = builder.asin;
         this.name = requireText(builder.name, "name");
+        this.nameKo = builder.nameKo;
         this.brand = requireText(builder.brand, "brand");
         this.category = Objects.requireNonNull(builder.category);
         this.description = builder.description;
@@ -74,14 +76,27 @@ public class Product {
     }
 
     public static Product pending(String name, String brand, String category, List<String> ingredients) {
+        return pending(name, null, brand, category, ingredients);
+    }
+
+    /**
+     * 등록 시점에 한글 이름까지 받는다.
+     *
+     * <p>검수 단계까지 미루지 않는 이유: 어드민이 제품을 등록할 때는 이미 상세 페이지를 보고
+     * 있어서 한글 이름을 알고 있다. 그때 안 받으면 나중에 같은 제품을 다시 열어야 한다.
+     */
+    public static Product pending(String name, String nameKo, String brand, String category,
+                                  List<String> ingredients) {
         boolean hasIngredients = ingredients != null && !ingredients.isEmpty();
         return builder()
+                .nameKo(nameKo == null || nameKo.isBlank() ? null : nameKo.trim())
                 .name(name)
                 .brand(brand)
                 .category(ProductCategory.from(category))
                 .ingredients(hasIngredients ? ingredients : null)
                 .ingredientSource(hasIngredients ? ADMIN_SOURCE : null)
-                .status(hasIngredients ? ProductStatus.INGREDIENTS_ADDED : ProductStatus.PENDING)
+                // 성분을 같이 넣어도 곧장 기능성으로 보내지 않는다 — 사전 연결·함량이 아직 비어 있다.
+                .status(hasIngredients ? ProductStatus.NEED_MANUAL_REVIEW : ProductStatus.PENDING)
                 .build();
     }
 
@@ -98,6 +113,7 @@ public class Product {
     public String id() { return id; }
     public String asin() { return asin; }
     public String name() { return name; }
+    public String nameKo() { return nameKo; }
     public String brand() { return brand; }
     public String category() { return category.value(); }
     public String description() { return description; }
@@ -128,10 +144,14 @@ public class Product {
             // 빈 저장은 아무것도 확인하지 못한 것이다. INSUFFICIENT_INGREDIENTS는 "크롤링은 됐는데
             // 성분이 5개 미만"이라는 파이프라인의 판정이라 어드민 저장으로 만들어 내면 안 된다.
             nextStatus = status;
-        } else if (status.functionalReviewDone()) {
-            nextStatus = status;
+        } else if (status == ProductStatus.NOT_FOUND) {
+            // 못 찾았다고 했다가 성분을 채운 경우. 다시 보완 대기로 돌려놓는다.
+            nextStatus = ProductStatus.NEED_MANUAL_REVIEW;
         } else {
-            nextStatus = ProductStatus.INGREDIENTS_ADDED;
+            // ⚠️ 여기서 INGREDIENTS_ADDED 로 넘기지 않는다. 전성분을 적은 것과 성분별 보완
+            //    (사전 연결·함량·특성)까지 마친 것은 다른 일이고, 전자만으로 상태를 옮기면
+            //    보완 화면을 아무도 거치지 않는다. 완료 선언은 completeIngredientReview() 다.
+            nextStatus = status;
         }
         boolean cleared = ingredientNotFound || ingredients == null || ingredients.isEmpty();
         return toBuilder()
@@ -139,6 +159,26 @@ public class Product {
                 .ingredientSource(cleared ? null : ADMIN_SOURCE)
                 .status(nextStatus)
                 .build();
+    }
+
+    /**
+     * 성분별 보완까지 마쳤다는 선언. 여기서 비로소 {@code INGREDIENTS_ADDED} 가 된다.
+     *
+     * <p>함량·특성을 하나도 안 채웠어도 넘어갈 수 있다 — 채울 값이 없는 제품이 실제로 있고,
+     * "보완할 게 없음을 확인했다"도 검수 결과이기 때문이다. 막는 건 <b>성분이 아예 없는 경우</b>
+     * 하나뿐이다. 그건 아직 1단계도 끝나지 않은 것이다.
+     *
+     * <p>기능성 검수를 이미 지난 제품은 되돌리지 않는다. 성분 하나 고쳤다고 기능성을 다시
+     * 보게 만들 이유가 없다.
+     */
+    public Product completeIngredientReview() {
+        if (ingredients == null || ingredients.isEmpty()) {
+            throw new IllegalStateException("전성분을 먼저 저장해야 성분 보완을 마칠 수 있습니다.");
+        }
+        if (status.functionalReviewDone()) {
+            return this;
+        }
+        return toBuilder().status(ProductStatus.INGREDIENTS_ADDED).build();
     }
 
     /**
@@ -163,9 +203,15 @@ public class Product {
         return toBuilder().function(function).status(nextStatus).build();
     }
 
+    public Product updateBasicInfo(String name, String nameKo, String brand, String category) {
+        return toBuilder().name(name).nameKo(blankToNull(nameKo)).brand(brand).category(category).build();
+    }
+
+    private static String blankToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+
     public Builder toBuilder() {
         return new Builder()
-                .id(id).asin(asin).name(name).brand(brand).category(category)
+                .id(id).asin(asin).name(name).nameKo(nameKo).brand(brand).category(category)
                 .description(description).price(price).thumbnailUrl(thumbnailUrl).productUrl(productUrl)
                 .mentionCount(mentionCount).adRatio(adRatio).adLikelihoodSum(adLikelihoodSum)
                 .ingredientSource(ingredientSource).ingredients(ingredients)
@@ -178,6 +224,7 @@ public class Product {
         private String id;
         private String asin;
         private String name;
+        private String nameKo;
         private String brand;
         private ProductCategory category;
         private String description;
@@ -197,6 +244,7 @@ public class Product {
         public Builder id(String v) { this.id = v; return this; }
         public Builder asin(String v) { this.asin = v; return this; }
         public Builder name(String v) { this.name = v; return this; }
+        public Builder nameKo(String v) { this.nameKo = v; return this; }
         public Builder brand(String v) { this.brand = v; return this; }
         public Builder category(ProductCategory v) { this.category = v; return this; }
         public Builder category(String v) { this.category = ProductCategory.from(v); return this; }

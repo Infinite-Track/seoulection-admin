@@ -49,6 +49,30 @@ public class IngredientPostgresRepository {
         jdbc.update("delete from property_definition where property_key = ?", key);
     }
 
+    /**
+     * 시드 전용 — <b>없을 때만</b> 넣고, 이미 있으면 아무것도 하지 않는다.
+     *
+     * <p>{@link #save} 는 upsert 라 어드민이 화면에서 고친 값을 재기동이 되돌린다.
+     * 시드의 목적은 "기본 성분을 깔아 두는 것"이지 "코드 값을 강제하는 것"이 아니다.
+     *
+     * <p>🔴 id 와 inci_name 을 <b>둘 다</b> 본다. id 로만 보면, 어드민이 같은 성분을 다른 id 로
+     * 만들어 둔 경우 삽입이 {@code uq_ingredient_inci_name}(대소문자 무시) 위반으로 터지고
+     * <b>앱이 기동하지 않는다</b> — 시드는 ApplicationRunner 라 실패가 곧 기동 실패다.
+     *
+     * @return 실제로 넣었으면 true
+     */
+    @Transactional
+    public boolean saveIfAbsent(String id, String inci, String ko, String family,
+                                List<String> aliases, Map<String, String> effects,
+                                Map<String, String> properties) {
+        Long existing = jdbc.queryForObject(
+                "select count(*) from ingredient where id = ? or lower(inci_name) = lower(?)",
+                Long.class, id, inci);
+        if (existing != null && existing > 0) return false;
+        save(id, inci, ko, family, aliases, effects, properties);
+        return true;
+    }
+
     @Transactional
     public void save(String id, String inci, String ko, String family,
                      List<String> aliases, Map<String, String> effects,

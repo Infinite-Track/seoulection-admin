@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>푸시 알림 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='notifications')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <h1>푸시 알림</h1>
+                <p class="description">대상과 문구를 검토한 뒤 수동 알림을 발송합니다.</p>
+            </div>
+        </header>
+
+        <main class="content notification-content">
+            <p class="alert alert-notice">
+                현재는 화면만 준비된 상태입니다. 대상 수 확인, 실제 발송, 발송 결과는 notification-service를 연결한 뒤 활성화됩니다.
+            </p>
+
+            <section class="card">
+                <div class="section-heading-row">
+                    <div>
+                        <h2>새 수동 발송</h2>
+                        <p class="card-subtitle">발송할 대상과 문구를 입력하고, 대상 수를 확인한 뒤 발송합니다.</p>
+                    </div>
+                    <span class="data-chip is-neutral">초안</span>
+                </div>
+
+                <form class="notification-form" onsubmit="return false">
+                    <div class="form-grid cols-2">
+                        <div>
+                            <label for="audience">대상</label>
+                            <select id="audience" name="audience">
+                                <option value="ACTIVE_DEVICES">푸시 수신이 가능한 전체 사용자</option>
+                            </select>
+                            <p class="form-help">처음에는 활성 기기 기준 전체 발송만 지원합니다.</p>
+                        </div>
+                        <div>
+                            <label for="send-at">발송 시점</label>
+                            <select id="send-at" name="sendAt">
+                                <option value="NOW">즉시 발송</option>
+                            </select>
+                            <p class="form-help">예약 발송은 이후 별도 기능으로 추가합니다.</p>
+                        </div>
+                        <div class="span-full">
+                            <label for="title">알림 제목</label>
+                            <input id="title" name="title" type="text" maxlength="50" placeholder="예: 이번 주 인기 제품을 확인해 보세요" required>
+                            <p class="form-help">최대 50자</p>
+                        </div>
+                        <div class="span-full">
+                            <label for="body">알림 내용</label>
+                            <textarea id="body" name="body" rows="4" maxlength="180" placeholder="사용자에게 보여 줄 알림 내용을 입력하세요." required></textarea>
+                            <p class="form-help">최대 180자</p>
+                        </div>
+                    </div>
+
+                    <div class="notification-preview">
+                        <div>
+                            <span class="field-label">발송 전 대상 수</span>
+                            <strong>notification-service 연결 후 계산</strong>
+                            <p>중복 기기를 제외한 사용자 수와 실제 발송 기기 수를 함께 보여 줍니다.</p>
+                        </div>
+                        <button class="button-secondary" type="button" disabled>대상 수 확인</button>
+                    </div>
+                    <div class="form-actions">
+                        <button class="button-primary" type="button" disabled>대상 수를 확인한 뒤 발송</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2>발송 결과</h2>
+                        <p class="card-subtitle">최근 수동 발송의 대상 수와 전달 결과를 확인합니다.</p>
+                    </div>
+                </div>
+                <div class="empty-state notification-empty-state">
+                    아직 표시할 발송 이력이 없습니다. notification-service 연동 후 발송 결과가 이곳에 쌓입니다.
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>

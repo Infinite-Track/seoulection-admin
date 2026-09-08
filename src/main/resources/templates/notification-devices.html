@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>기기 토큰 관리 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='notification-devices')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <h1>기기 토큰 관리</h1>
+                <p class="description">
+                    푸시가 안 오거나 지운 기기로 계속 오는 문의를 다룹니다. 해제하면 그 기기로는 더 이상 발송되지 않습니다.
+                </p>
+            </div>
+            <a class="btn-ghost" href="/admin/notifications">푸시 발송</a>
+        </header>
+
+        <main class="content">
+            <div class="flash is-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+
+            <section class="card">
+                <div class="panel-header">
+                    <div>
+                        <h2>사용자 기기 조회</h2>
+                        <p class="card-subtitle">사용자 ID 로 살아 있는 등록만 보여 줍니다.</p>
+                    </div>
+                </div>
+                <form method="get" action="/admin/notifications/devices">
+                    <div class="form-grid cols-2">
+                        <div class="field">
+                            <label for="userId">사용자 ID</label>
+                            <input id="userId" name="userId" type="number" th:value="${userId}" required>
+                            <p class="form-help">토큰으로는 찾지 않습니다 — 입력하면 그 값이 로그와 브라우저 기록에 남습니다.</p>
+                        </div>
+                    </div>
+                    <button class="btn-primary" type="submit">조회</button>
+                </form>
+            </section>
+
+            <section class="card is-flush" th:if="${searched}">
+                <div class="panel-header">
+                    <div>
+                        <h2>등록된 기기<span class="count-inline" th:text="${devices.size()}">0</span></h2>
+                        <p class="card-subtitle">토큰은 앞뒤 일부만 보여 줍니다. 전문이 있으면 그것만으로 발송할 수 있습니다.</p>
+                    </div>
+                </div>
+
+                <table class="data-table" th:if="${!devices.isEmpty()}">
+                    <thead>
+                    <tr><th>플랫폼</th><th>토큰</th><th class="is-right">해제</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="device : ${devices}">
+                        <td><span class="data-chip is-neutral" th:text="${device.platform}">IOS</span></td>
+                        <td><code th:text="${device.tokenPreview}">abc123…7f9d</code></td>
+                        <td class="is-right">
+                            <form th:action="@{'/admin/notifications/devices/' + ${device.id} + '/revoke'}" method="post"
+                                  onsubmit="return confirm('이 기기 등록을 해제할까요? 해제하면 더 이상 푸시가 가지 않습니다.');">
+                                <input type="hidden" name="userId" th:value="${userId}">
+                                <button class="btn-danger" type="submit">해제</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <div class="empty" th:if="${devices.isEmpty()}">
+                    <span>살아 있는 기기 등록이 없습니다. 앱에서 알림을 한 번 켜야 등록됩니다.</span>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>

@@ -17,6 +17,7 @@
             </div>
             <div class="topbar-actions">
                 <button type="button" class="button-secondary" data-panel-toggle="optionPanel" aria-expanded="false" aria-controls="optionPanel">선택지 추가</button>
+                <button type="button" class="button-secondary" data-panel-toggle="evidencePanel" aria-expanded="false" aria-controls="evidencePanel">근거 추가</button>
                 <button type="button" class="btn-primary" data-panel-toggle="questionPanel" aria-expanded="false" aria-controls="questionPanel">
                     <span class="btn-icon" aria-hidden="true">＋</span>문항 추가
                 </button>
@@ -52,6 +53,48 @@
                         </form>
                     </div>
                 </div>
+
+                <!--
+                  문항 근거 — 한 줄로 접어 둔다. 펼쳐야 편집 칸이 나온다.
+                  표에 textarea 를 넣으니 근거 하나가 서너 줄을 먹어, 정작 자주 쓰는
+                  선택지 편집이 스크롤 아래로 밀렸다. 추가는 상단 "근거 추가" 드로어에서 한다.
+                -->
+                <div class="evidence-list" th:if="${evidenceByQuestion.containsKey(question.key)}">
+                    <details class="evidence" th:each="evidence : ${evidenceByQuestion.get(question.key)}">
+                        <summary>
+                            <span class="data-chip is-neutral" th:text="${evidence.sourceLabel()}">논문</span>
+                            <strong th:text="${evidence.title}">제목</strong>
+                            <span class="evidence-preview" th:text="${evidence.rationale}">묻는 이유</span>
+                        </summary>
+                        <div class="evidence-body">
+                            <p class="evidence-rationale" th:text="${evidence.rationale}">묻는 이유</p>
+                            <a class="text-link" th:if="${evidence.hasUrl()}" th:href="${evidence.url}"
+                               target="_blank" rel="noopener noreferrer">원문 열기</a>
+
+                            <form class="option-form evidence-form"
+                                  th:action="@{'/admin/survey/evidence/' + ${evidence.id}}" method="post">
+                                <input type="text" name="title" th:value="${evidence.title}" required aria-label="제목">
+                                <select name="sourceType" aria-label="종류">
+                                    <option th:each="type : ${sourceTypes}" th:value="${type}" th:text="${type}"
+                                            th:selected="${type == evidence.sourceType}"></option>
+                                </select>
+                                <input type="url" name="url" th:value="${evidence.url}" placeholder="링크(선택)" aria-label="링크">
+                                <input type="number" name="sortOrder" th:value="${evidence.sortOrder}" min="0" aria-label="순서">
+                                <textarea name="rationale" rows="2" required aria-label="묻는 이유"
+                                          th:text="${evidence.rationale}"></textarea>
+                                <button class="subtle" type="submit">저장</button>
+                            </form>
+
+                            <form th:action="@{'/admin/survey/evidence/' + ${evidence.id} + '/delete'}" method="post"
+                                  onsubmit="return confirm('이 근거를 삭제할까요?');">
+                                <button class="danger" type="submit">삭제</button>
+                            </form>
+                        </div>
+                    </details>
+                </div>
+                <p class="empty-inline" th:unless="${evidenceByQuestion.containsKey(question.key)}">
+                    근거가 없습니다. 이 문항을 왜 묻는지 남겨 두면 나중에 고치거나 뺄 때 판단할 수 있습니다.
+                </p>
 
                 <div class="table-scroll" th:if="${!question.options.isEmpty()}">
                     <table class="admin-table option-table">
@@ -198,6 +241,71 @@
         <div class="form-footer">
             <button type="button" class="button-secondary" data-panel-toggle="optionPanel">취소</button>
             <button type="submit" class="btn-primary">선택지 추가</button>
+        </div>
+    </form>
+</aside>
+
+<!--
+  근거 추가 드로어 — 선택지 추가와 같은 구조다(대상 문항 라디오 + 입력).
+  문항 카드 안에 추가 폼을 두지 않는 이유: 문항이 늘수록 같은 폼이 그만큼 반복돼
+  정작 자주 쓰는 선택지 편집이 스크롤 아래로 밀린다.
+-->
+<aside class="drawer" id="evidencePanel" role="dialog" aria-modal="true"
+       aria-labelledby="evidencePanelTitle" th:classappend="${evidenceFormOpen} ? ' is-open' : ''">
+    <div class="drawer-header">
+        <div>
+            <h2 id="evidencePanelTitle">근거 추가</h2>
+            <p class="card-subtitle">이 문항을 왜 묻는지 남깁니다. 링크는 선택입니다.</p>
+        </div>
+        <button type="button" class="btn-ghost" data-panel-toggle="evidencePanel" aria-label="닫기">닫기</button>
+    </div>
+    <form th:action="@{/admin/survey/evidence}" method="post">
+        <div class="drawer-body">
+            <div class="form-section">
+                <div class="form-section-title">대상 문항</div>
+                <div class="toggle-group">
+                    <label class="toggle-option" th:each="question : ${questions}">
+                        <input type="radio" name="questionKey" th:value="${question.key}" required>
+                        <span th:text="${question.key}"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">근거 내용</div>
+                <div class="form-grid cols-2">
+                    <div>
+                        <label for="evidenceTitle">제목</label>
+                        <input type="text" id="evidenceTitle" name="title" required
+                               placeholder="예) 피부 장벽 손상과 수분 손실 상관 연구" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="evidenceSourceType">종류</label>
+                        <select id="evidenceSourceType" name="sourceType">
+                            <option th:each="type : ${sourceTypes}" th:value="${type}" th:text="${type}"></option>
+                        </select>
+                    </div>
+                    <div class="span-full">
+                        <label for="evidenceRationale">이 문항을 왜 묻는가</label>
+                        <textarea id="evidenceRationale" name="rationale" rows="3" required
+                                  placeholder="링크를 열지 않아도 알 수 있게 적어 주세요."></textarea>
+                        <p class="form-help">이 한 줄이 나중에 문항을 고치거나 뺄 때의 근거가 됩니다.</p>
+                    </div>
+                    <div>
+                        <label for="evidenceUrl">원문 링크<span class="optional-mark">선택</span></label>
+                        <input type="url" id="evidenceUrl" name="url" placeholder="https://">
+                        <p class="form-help">내부 자료라 링크가 없어도 됩니다.</p>
+                    </div>
+                    <div>
+                        <label for="evidenceSortOrder">노출 순서</label>
+                        <input type="number" id="evidenceSortOrder" name="sortOrder" value="0" min="0">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-footer">
+            <button type="button" class="button-secondary" data-panel-toggle="evidencePanel">취소</button>
+            <button type="submit" class="btn-primary">근거 추가</button>
         </div>
     </form>
 </aside>

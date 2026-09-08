@@ -22,6 +22,7 @@ public class ProductRegisterRequest {
     @NotBlank(message = "브랜드명을 입력해 주세요.")
     @Size(max = 100, message = "브랜드명은 100자 이하여야 합니다.")
     private String brand;
+    private String nameKo;
 
     @NotBlank(message = "카테고리를 입력해 주세요.")
     @Pattern(
@@ -49,6 +50,8 @@ public class ProductRegisterRequest {
 
     public String getBrand() { return brand; }
     public void setBrand(String brand) { this.brand = brand; }
+    public String getNameKo() { return nameKo; }
+    public void setNameKo(String nameKo) { this.nameKo = nameKo; }
 
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }

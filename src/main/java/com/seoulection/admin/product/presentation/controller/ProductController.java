@@ -1,6 +1,9 @@
 package com.seoulection.admin.product.presentation.controller;
 
 import com.seoulection.admin.product.application.service.ProductService;
+import com.seoulection.admin.product.domain.enums.ProductFunctionalCategory;
+import com.seoulection.admin.product.functional.application.FunctionalScreeningService;
+import com.seoulection.admin.product.functional.domain.FunctionalScreening;
 import com.seoulection.admin.product.domain.enums.ProductStage;
 import com.seoulection.admin.product.domain.enums.ProductStatus;
 import com.seoulection.admin.product.presentation.dto.ProductRegisterRequest;
@@ -20,6 +23,9 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.seoulection.admin.product.application.dto.ProductIngredientProperty;
+import java.util.ArrayList;
+import java.math.BigDecimal;
 
 @Controller
 public class ProductController {
@@ -28,10 +34,13 @@ public class ProductController {
     private static final int PAGE_SIZE = 25;
 
     private final ProductService service;
+    private final FunctionalScreeningService screeningService;
     private final ObjectMapper objectMapper;
 
-    public ProductController(ProductService service, ObjectMapper objectMapper) {
+    public ProductController(ProductService service, FunctionalScreeningService screeningService,
+                             ObjectMapper objectMapper) {
         this.service = service;
+        this.screeningService = screeningService;
         this.objectMapper = objectMapper;
     }
 
@@ -133,8 +142,15 @@ public class ProductController {
             model.addAttribute("registerFormOpen", true);
             return "products";
         }
-        service.register(request.getName(), request.getBrand(), request.getCategory(),
-                splitIngredients(request.getIngredientsText()));
+        List<String> ingredients = splitIngredients(request.getIngredientsText());
+        var created = service.register(request.getName(), request.getNameKo(), request.getBrand(),
+                request.getCategory(), ingredients);
+        // 성분을 함께 넣었으면 함량을 바로 채우게 성분 탭으로 보낸다. 함량은 성분 행이
+        // 저장된 뒤에야 붙일 수 있어 등록 폼에서 미리 받을 수 없다.
+        if (!ingredients.isEmpty()) {
+            redirectAttributes.addFlashAttribute("successMessage", "제품을 등록했습니다. 이어서 함량을 입력하세요.");
+            return "redirect:/admin/products/" + created.id() + "/workflow?step=ingredients";
+        }
         redirectAttributes.addFlashAttribute("successMessage", "제품을 등록했습니다.");
         return "redirect:/admin/products";
     }
@@ -150,8 +166,66 @@ public class ProductController {
     public String detail(@PathVariable String id, Model model) {
         var product = service.getProduct(id);
         model.addAttribute("product", product);
+        model.addAttribute("productIngredients", service.getProductIngredients(id));
+        model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         model.addAttribute("inciapiRawJson", prettyJson(product.inciapiRawData()));
         return "product-detail";
+    }
+
+    @PostMapping("/admin/products/{id}/basic")
+    public String updateBasic(@PathVariable String id, @RequestParam String name,
+                              @RequestParam(required=false) String nameKo, @RequestParam String brand,
+                              @RequestParam String category, RedirectAttributes redirectAttributes) {
+        service.updateBasicInfo(id, name, nameKo, brand, category);
+        redirectAttributes.addFlashAttribute("successMessage", "제품 기본 정보를 저장했습니다.");
+        return "redirect:/admin/products/" + id;
+    }
+
+    /**
+     * 성분 한 행 저장 — 함량과 <b>이 제품에서의 특성</b>.
+     *
+     * <p>특성은 폼에서 {@code propertyKey[]}, {@code propertyValueText[]} ... 처럼 같은 이름의 배열로
+     * 온다. 순서가 곧 짝이므로 인덱스로 묶는다. 빈 칸은 저장하지 않는다 — 지운 것과 같게 다룬다.
+     */
+    @PostMapping("/admin/products/{id}/ingredients/{rowId}")
+    public String reviewIngredient(@PathVariable String id, @PathVariable long rowId,
+            @RequestParam(required=false) String ingredientId,
+            @RequestParam(required=false) BigDecimal concentrationMin,
+            @RequestParam(required=false) BigDecimal concentrationMax,
+            @RequestParam(required=false) String unit,
+            @RequestParam(required=false) String notes,
+            @RequestParam(required=false) List<String> propertyKey,
+            @RequestParam(required=false) List<String> propertyValueText,
+            @RequestParam(required=false) List<String> propertyValueMin,
+            @RequestParam(required=false) List<String> propertyValueMax,
+            RedirectAttributes redirectAttributes) {
+        service.reviewProductIngredient(id, rowId, ingredientId, concentrationMin, concentrationMax, unit, notes,
+                toProperties(propertyKey, propertyValueText, propertyValueMin, propertyValueMax));
+        redirectAttributes.addFlashAttribute("successMessage", "제품별 성분 정보를 저장했습니다.");
+        return "redirect:/admin/products/" + id;
+    }
+
+    private List<ProductIngredientProperty> toProperties(List<String> keys, List<String> texts,
+                                                        List<String> mins, List<String> maxs) {
+        if (keys == null) return List.of();   // 특성 칸이 아예 없는 폼 → 건드리지 않는다
+        List<ProductIngredientProperty> properties = new ArrayList<>();
+        for (int i = 0; i < keys.size(); i++) {
+            String key = keys.get(i);
+            if (key == null || key.isBlank()) continue;
+            properties.add(new ProductIngredientProperty(key, at(texts, i),
+                    decimal(at(mins, i)), decimal(at(maxs, i)), null, null));
+        }
+        return properties;
+    }
+
+    private String at(List<String> values, int index) {
+        return values == null || index >= values.size() ? null : values.get(index);
+    }
+
+    /** 빈 칸과 "숫자가 아님"을 모두 null 로 본다 — 폼 하나 때문에 500을 내지 않는다. */
+    private BigDecimal decimal(String value) {
+        if (value == null || value.isBlank()) return null;
+        try { return new BigDecimal(value.trim()); } catch (NumberFormatException e) { return null; }
     }
 
     private String prettyJson(Map<String, Object> raw) {
@@ -193,8 +267,115 @@ public class ProductController {
             return "redirect:/admin/products/" + id + "/workflow";
         }
         service.reviewIngredients(id, ingredients, ingredientNotFound);
-        redirectAttributes.addFlashAttribute("successMessage", "전성분을 저장했습니다.");
-        return "redirect:/admin/products?stage=ingredient-review";
+        // 성분을 찾지 못했으면 채울 함량이 없으니 큐로 돌아간다. 찾았으면 같은 탭에 남아
+        // 방금 저장된 성분 목록에 함량을 채우게 한다 — 화면을 옮기면 맥락이 끊긴다.
+        if (ingredientNotFound) {
+            redirectAttributes.addFlashAttribute("successMessage", "성분을 찾지 못함으로 저장했습니다.");
+            return "redirect:/admin/products?stage=ingredient-review";
+        }
+        redirectAttributes.addFlashAttribute("successMessage",
+                "전성분을 저장했습니다. 이어서 성분별 보완을 마치고 아래 '성분 보완 완료'를 누르세요.");
+        return "redirect:/admin/products/" + id + "/workflow?step=ingredients";
+    }
+
+    /**
+     * 1단계 완료 선언 — 성분별 보완을 마쳤다는 뜻이고, 여기서 상태가 INGREDIENTS_ADDED 가 된다.
+     *
+     * <p>함량을 하나도 안 채웠어도 누를 수 있다. 채울 값이 없는 제품이 실제로 있고, 그때
+     * 완료를 막으면 제품이 성분 보완 큐에 영원히 남는다.
+     */
+    @PostMapping("/admin/products/{id}/workflow/ingredients/complete")
+    public String completeIngredientReview(@PathVariable String id, RedirectAttributes redirectAttributes) {
+        try {
+            service.completeIngredientReview(id);
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/admin/products/" + id + "/workflow?step=ingredients";
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "성분 보완을 마쳤습니다. 이어서 기능성을 확인하세요.");
+        return "redirect:/admin/products/" + id + "/workflow?step=functional";
+    }
+
+    /**
+     * 2단계 자동 — 한글 이름을 저장하고 곧바로 의약품안전나라를 조회해 기능성까지 기록한다.
+     *
+     * <p>트리거가 한글 이름인 이유: 안전나라 등록명(ITEM_NAME)은 전부 한글이고 브랜드 한글
+     * 표기로 시작한다("구달청귤비타씨잡티세럼"). 영문 제품명만으로는 조회가 시작조차 안 되므로,
+     * 한글 이름이 채워지는 그 순간이 자동 조회가 가장 잘 듣는 시점이다.
+     *
+     * <p>확정되면 큐로 돌아가고, 못 찾으면 같은 화면에 남아 후보와 사유를 보여 준다 —
+     * 어드민이 손대는 건 그때뿐이다.
+     */
+    @PostMapping("/admin/products/{id}/workflow/functional-screening")
+    public String workflowScreen(@PathVariable String id, @RequestParam(required = false) String nameKo,
+                                 RedirectAttributes redirectAttributes) {
+        if (nameKo == null || nameKo.isBlank()) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "자동 조회는 한글 이름으로 검색합니다 — 한글 이름을 먼저 입력해 주세요.");
+            return "redirect:/admin/products/" + id + "/workflow?step=functional";
+        }
+        var current = service.getProduct(id);
+        service.updateBasicInfo(id, current.name(), nameKo.trim(), current.brand(), current.category());
+
+        var screened = screeningService.screenAfterNameSaved(id);
+        if (screened.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "자동 조회가 꺼져 있습니다(admin.functional-screening.enabled). 아래에서 직접 입력해 주세요.");
+            return "redirect:/admin/products/" + id + "/workflow?step=functional";
+        }
+
+        FunctionalScreening screening = screened.get();
+        if (screening.outcome().decided() && screeningService.appliesDecisions()) {
+            // 규제 정보가 조용히 저장되고 화면만 넘어가면 나중에 되짚을 실마리가 없다 —
+            // 무엇이 어떤 근거로 기록됐는지 문구로 남긴다.
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "한글 이름을 저장하고 기능성을 자동 확정했습니다 — " + describe(screening));
+            return "redirect:/admin/products?stage=functional-review";
+        }
+        if (screening.outcome().decided()) {
+            // 판정은 끝났지만 확정은 사람이 한다. 폼이 미리 채워진 채로 열리고, 어드민은
+            // 근거를 보고 저장만 누르면 된다.
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "자동 조회 결과를 아래에 채워 두었습니다 — " + describe(screening)
+                            + " 확인 후 저장을 눌러 확정해 주세요.");
+            return "redirect:/admin/products/" + id + "/workflow?step=functional";
+        }
+        redirectAttributes.addFlashAttribute("errorMessage",
+                "자동 조회로 확정하지 못했습니다(" + screening.outcome().displayName() + "): "
+                        + screening.reason() + " 아래에서 직접 확인해 주세요.");
+        return "redirect:/admin/products/" + id + "/workflow?step=functional";
+    }
+
+    /**
+     * 자동 판정 결과를 검수 폼에 미리 채운다. 어드민은 근거를 보고 저장만 누르면 된다.
+     *
+     * <p>⚠️ <b>"기능성 아님"은 미리 고르지 않는다.</b> 확인 없이 저장만 눌러도 식약처 기능성이
+     * 아니라는 사실이 기록되는 게 이 폼에서 가장 비싼 실수이고, 자동 조회가 못 찾은 것과
+     * 실제로 기능성이 아닌 것은 겉보기가 같다. 반대로 유형이 나온 경우는 안전나라 응답이라는
+     * 근거가 있으므로 채워 둔다.
+     *
+     * <p>이미 검수를 마친 제품은 건드리지 않는다 — 사람이 정한 값을 자동 판정이 덮으면 안 된다.
+     */
+    private void prefillFromScreening(ProductRegisterRequest request,
+                                      com.seoulection.admin.product.application.dto.ProductResult product,
+                                      FunctionalScreening screening) {
+        if (screening == null || product.status().functionalReviewDone() || screening.claims().isEmpty()) {
+            return;
+        }
+        request.setFunctionResult("CONFIRMED");
+        request.setFunction(screening.claims().stream().map(Enum::name).toList());
+    }
+
+    /** 자동 확정 결과 문구. 유형이 비어 있으면 "기능성 아님"으로 확정된 것이다. */
+    private String describe(FunctionalScreening screening) {
+        var selected = screening.selected();
+        String evidence = selected == null ? "" : " / 근거: " + selected.item().itemName();
+        if (screening.claims().isEmpty()) {
+            return "기능성 아님 (" + screening.reason() + ")";
+        }
+        return screening.claims().stream()
+                .map(ProductFunctionalCategory::displayName)
+                .reduce((a, b) -> a + ", " + b).orElse("") + evidence;
     }
 
     /** 2단계 저장 — 식약처 기능성만. 저장 후 기능성 확인 큐로 돌아간다. */
@@ -206,6 +387,13 @@ public class ProductController {
             redirectAttributes.addFlashAttribute("errorMessage", "의약품안전나라 조회 결과를 선택해 주세요.");
             return "redirect:/admin/products/" + id + "/workflow";
         }
+        // 한글 이름은 기능성과 같은 탭에서 받는다. 비워 두면 유지한다 —
+        // 지우려는 의도와 구분할 수 없어 덮어쓰지 않는다.
+        String nameKo = request.getNameKo();
+        if (nameKo != null && !nameKo.isBlank()) {
+            var current = service.getProduct(id);
+            service.updateBasicInfo(id, current.name(), nameKo.trim(), current.brand(), current.category());
+        }
         boolean confirmed = "CONFIRMED".equals(result);
         boolean hasFunction = !request.getFunction().isEmpty();
         if (confirmed && !hasFunction) {
@@ -214,9 +402,20 @@ public class ProductController {
         }
         // '기능성 아님'을 고르고 유형을 남겨 두면 모순이므로 유형을 버린다.
         service.reviewFunction(id, confirmed ? request.getFunction() : List.of());
+        // 자동 판정이 남아 있다면 "사람이 정했다"로 덮는다 — 나중에 이 제품의 기능성이
+        // 누구의 판단이었는지 되짚을 수 있어야 한다.
+        screeningService.markDecidedByAdmin(id);
         redirectAttributes.addFlashAttribute("successMessage", "기능성 검수 정보를 저장했습니다.");
         return "redirect:/admin/products?stage=functional-review";
     }
+
+    /**
+     * 검수 탭. 기존 2탭 구조를 지킨다 — 성분 보완(성분+함량)과 기능성 확인(한글 이름+기능성).
+     *
+     * <p>탭을 더 쪼개지 않는 이유: 근거 자료가 다른 두 작업이라 나누는 것이지, 입력 항목마다
+     * 나누면 저장 버튼만 늘고 어드민이 같은 제품을 네 번 열게 된다.
+     */
+    private static final List<String> WORKFLOW_STEPS = List.of("ingredients", "functional");
 
     /**
      * 검수 작업 화면. 어느 단계를 열지는 제품 상태가 정한다({@link ProductStatus#workflowStep()}).
@@ -241,14 +440,30 @@ public class ProductController {
         request.setIngredientsText(product.ingredients() == null ? "" : String.join(", ", product.ingredients()));
         model.addAttribute("product", product);
         model.addAttribute("request", request);
-        String resolved = "ingredients".equals(step) || "functional".equals(step)
-                ? step
-                : product.status().workflowStep();
+        // 4단계 마법사: 성분 → 함량 → 한글 이름 → 기능성.
+        // step 이 없으면 제품 상태가 진입점을 정한다(status.workflowStep()).
+        // ⚠️ step == null 검사를 빼지 말 것. List.of() 는 불변 리스트라 contains(null) 이
+        //    false 가 아니라 NullPointerException 이다(step 파라미터는 대개 없다).
+        String resolved = step != null && WORKFLOW_STEPS.contains(step)
+                ? step : product.status().workflowStep();
         if (resolved == null) {
             // 파이프라인이 굴리는 중이거나 이미 끝난 제품은 어드민이 할 일이 없다 — 상세로 보낸다.
             return "redirect:/admin/products/" + id;
         }
         model.addAttribute("workflowStep", resolved);
+        model.addAttribute("workflowSteps", WORKFLOW_STEPS);
+        model.addAttribute("workflowStepIndex", WORKFLOW_STEPS.indexOf(resolved));
+        if ("ingredients".equals(resolved)) {
+            model.addAttribute("productIngredients", service.getProductIngredients(id));
+            model.addAttribute("propertyDefinitions", service.propertyDefinitions());
+        }
+        if ("functional".equals(resolved)) {
+            // 한글 이름이 이미 있으면 화면을 여는 것만으로 자동 조회가 한 번 돈다. 없으면
+            // 조회할 근거가 없으니 아무것도 하지 않고 입력 칸만 보여 준다.
+            var screening = screeningService.findOrScreen(id).orElse(null);
+            model.addAttribute("screening", screening);
+            prefillFromScreening(request, product, screening);
+        }
         return "product-workflow";
     }
 }

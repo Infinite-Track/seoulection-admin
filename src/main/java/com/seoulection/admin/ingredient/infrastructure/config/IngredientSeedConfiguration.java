@@ -14,7 +14,10 @@ public class IngredientSeedConfiguration {
     @Bean
     ApplicationRunner seedIngredients(IngredientPostgresRepository repository) {
         return args -> {
-            if (!repository.findAll().isEmpty()) return;
+            // ⚠️ "성분이 하나라도 있으면 통째로 건너뛴다"로 두지 말 것. 그러면 아래 목록에
+            //    성분을 추가해도 영영 들어가지 않는다 — 코드에는 있는데 DB 에는 없어서
+            //    "왜 없지"를 찾는 데 시간을 쓴다. 대신 성분마다 없을 때만 넣는다.
+            //    이미 있는 것은 건드리지 않으므로 어드민이 화면에서 고친 값도 살아남는다.
             List.of(
                     i("00000000-0000-0000-0000-000000000101","Hyaluronic Acid","Hyaluronic Acid","히알루론산","HYALURONAN",List.of("HA","히알루론산"),List.of("HYALURONIC_ACID_SEARCH"),Map.of("WATER_SCORE","CORE","WRINKLE_SCORE","SUPPORT"),Map.of("SOLUBILITY","WATER_SOLUBLE")),
                     i("00000000-0000-0000-0000-000000000102","Sodium DNA","Sodium DNA","PDRN","NUCLEOTIDE_DERIVATIVE",List.of("PDRN","소듐 DNA"),List.of("PDRN_SEARCH"),Map.of("WATER_SCORE","SUPPORT","WRINKLE_SCORE","SUPPORT"),Map.of("SOLUBILITY","WATER_SOLUBLE")),
@@ -33,7 +36,7 @@ public class IngredientSeedConfiguration {
                     i("00000000-0000-0000-0000-000000000115","Human Oligopeptide-1","Human Oligopeptide-1","EGF","PEPTIDE_GROWTH_FACTOR",List.of("EGF","상피세포성장인자"),List.of("EGF_SEARCH"),Map.of("ROUGH_SCORE","SUPPORT","WRINKLE_SCORE","SUPPORT"),Map.of("STABILITY","PROTEIN_STABILITY_SENSITIVE"))
                     ,i("00000000-0000-0000-0000-000000000117","Sodium Hyaluronate","Sodium Hyaluronate","히알루론산 나트륨","HYALURONAN",List.of("히알루론산 나트륨"),List.of(),Map.of("WATER_SCORE","CORE","WRINKLE_SCORE","SUPPORT"),Map.of("SOLUBILITY","WATER_SOLUBLE"))
                     ,i("00000000-0000-0000-0000-000000000118","Hydrolyzed Hyaluronic Acid","Hydrolyzed Hyaluronic Acid","가수분해 히알루론산","HYALURONAN",List.of("Hydrolyzed HA","가수분해 히알루론산"),List.of(),Map.of("WATER_SCORE","CORE","WRINKLE_SCORE","SUPPORT"),Map.of("SOLUBILITY","WATER_SOLUBLE"))
-            ).forEach(seed -> repository.save(seed.getId(), seed.getInciName(), seed.getDisplayNameKo(),
+            ).forEach(seed -> repository.saveIfAbsent(seed.getId(), seed.getInciName(), seed.getDisplayNameKo(),
                     seed.getFamily(), seed.getAliases(), seed.getEffects(), seed.getProperties()));
         };
     }

@@ -86,6 +86,9 @@
                 </div>
             </section>
 
+            <!-- 성분별 보완 — 워크플로 2단계와 같은 조각을 쓴다(입력 규칙이 갈리면 안 된다). -->
+            <div th:replace="~{fragments/ingredient-rows :: rows(${product}, ${productIngredients}, ${propertyDefinitions})}"></div>
+
             <section class="card is-flush">
                 <div class="panel-header">
                     <div>
