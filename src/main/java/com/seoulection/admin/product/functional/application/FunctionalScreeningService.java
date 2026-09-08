@@ -146,7 +146,9 @@ public class FunctionalScreeningService {
         long brandCount = brandItems.size();
 
         if (candidates.isEmpty()) {
-            return noCandidate(target, brandCount);
+            // 브랜드 전수를 한글 표기로 못 돌렸으면 "0건"이 음성 근거가 되지 못한다 —
+            // 등록명은 전부 한글이라 영문 브랜드명으로 조회하면 무조건 0건이 나온다.
+            return noCandidate(target, brandCount, containsHangul(brandKo));
         }
 
         MfdsCandidate top = candidates.get(0);
@@ -185,8 +187,8 @@ public class FunctionalScreeningService {
      * 후보가 하나도 없을 때. 여기가 자동화에서 가장 조심할 지점이다 — <b>검색 실패와 기능성
      * 아님은 겉보기가 같다</b>. 브랜드 등록이 0건일 때만 둘을 가를 수 있다.
      */
-    private FunctionalScreening noCandidate(ScreeningTarget target, long brandCount) {
-        boolean brandAbsent = brandCount == 0;
+    private FunctionalScreening noCandidate(ScreeningTarget target, long brandCount, boolean brandLookupReliable) {
+        boolean brandAbsent = brandCount == 0 && brandLookupReliable;
         boolean lawRequiresFunctional = FUNCTIONAL_BY_LAW_CATEGORIES.contains(target.category());
         boolean hintsFunctional = hasFunctionalHint(target);
 
@@ -203,6 +205,8 @@ public class FunctionalScreeningService {
             reason = "제품명이 기능성을 암시하는데 등록 건을 찾지 못했습니다 — 직접 확인해 주세요";
         } else if (brandAbsent) {
             reason = "이 브랜드의 기능성 등록이 한 건도 없습니다(기능성 아님일 가능성이 높습니다)";
+        } else if (!brandLookupReliable) {
+            reason = "브랜드 한글 표기를 몰라 전수 조회를 못 했습니다 — 등록 여부를 직접 확인해 주세요";
         } else {
             reason = "브랜드 등록은 " + brandCount + "건 있으나 이 제품과 맞는 건을 찾지 못했습니다";
         }
@@ -283,6 +287,10 @@ public class FunctionalScreeningService {
                 .sorted(Comparator.comparingDouble(MfdsCandidate::score).reversed())
                 .limit(properties.getMaxCandidates())
                 .toList();
+    }
+
+    private boolean containsHangul(String value) {
+        return value != null && value.chars().anyMatch(ch -> ch >= 0xAC00 && ch <= 0xD7A3);
     }
 
     private boolean hasFunctionalHint(ScreeningTarget target) {

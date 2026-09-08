@@ -81,14 +81,9 @@ public class FunctionalScreeningProperties {
     public static class Llm {
         private boolean enabled = false;
         private String model = "claude-opus-5";
-        /** 한글 표기를 도저히 모르는 브랜드용. 법인명은 API가 알려주므로 보통 필요 없다. */
-        private boolean webSearch = false;
-
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
         public String getModel() { return model; }
         public void setModel(String model) { this.model = model; }
-        public boolean isWebSearch() { return webSearch; }
-        public void setWebSearch(boolean webSearch) { this.webSearch = webSearch; }
     }
 }

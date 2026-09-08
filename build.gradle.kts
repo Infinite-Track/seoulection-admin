@@ -18,6 +18,12 @@ repositories {
 }
 
 dependencies {
+	// Claude API — 기능성 스크리닝의 이름 해석(브랜드 한글 표기·등록명 후보·동일 제품 판정)에 쓴다.
+	// ⚠️ 이 의존성이 없으면 ClaudeProductNameResolver 가 컴파일되지 않아 앱이 아예 기동하지 않는다.
+	//    LLM 을 끄는 것은 admin.functional-screening.llm.enabled=false 로 하는 것이지,
+	//    의존성을 빼는 것이 아니다(@ConditionalOnProperty 는 런타임 스위치다).
+	implementation("com.anthropic:anthropic-java:2.34.0")
+
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.springframework.boot:spring-boot-starter-validation")
