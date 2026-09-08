@@ -23,9 +23,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 public class SurveyAdminController {
 
+    private final com.seoulection.admin.survey.application.service.SurveyEvidenceService evidenceService;
+
     private final SurveyAdminService service;
 
-    public SurveyAdminController(SurveyAdminService service) {
+    public SurveyAdminController(SurveyAdminService service, com.seoulection.admin.survey.application.service.SurveyEvidenceService evidenceService) {
+        this.evidenceService = evidenceService;
         this.service = service;
     }
 
@@ -38,6 +41,8 @@ public class SurveyAdminController {
             model.addAttribute("questionRequest", new SurveyQuestionCreateRequest());
         }
         model.addAttribute("questions", service.getQuestions());
+        model.addAttribute("evidenceByQuestion", evidenceService.byQuestion());
+        model.addAttribute("sourceTypes", java.util.List.of("PAPER", "GUIDELINE", "CLINICAL", "ARTICLE", "INTERNAL"));
         return "survey";
     }
 
@@ -137,6 +142,51 @@ public class SurveyAdminController {
         service.changeQuestionActive(questionKey, active);
         redirectAttributes.addFlashAttribute("successMessage",
                 active ? "문항을 다시 노출합니다." : "문항을 숨겼습니다. 기존 응답은 그대로 남습니다.");
+        return "redirect:/admin/survey";
+    }
+
+    // ── 문항 근거 ─────────────────────────────────────────────────────────
+    // 설문이 "근거 기반"이어야 한다는 요구. 문항 하나에 근거 여러 개가 붙는다(1:N) —
+    // 논문 하나로 시작해도 나중에 가이드라인·임상 자료가 붙는다.
+
+    @PostMapping("/admin/survey/questions/{questionKey}/evidence")
+    public String addEvidence(@PathVariable String questionKey,
+                              @RequestParam String title,
+                              @RequestParam String rationale,
+                              @RequestParam(required = false) String url,
+                              @RequestParam(required = false) String sourceType,
+                              @RequestParam(required = false) Integer sortOrder,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            evidenceService.add(questionKey, title, rationale, url, sourceType, sortOrder);
+            redirectAttributes.addFlashAttribute("successMessage", "근거를 추가했습니다.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/survey";
+    }
+
+    @PostMapping("/admin/survey/evidence/{id}")
+    public String updateEvidence(@PathVariable Long id,
+                                 @RequestParam String title,
+                                 @RequestParam String rationale,
+                                 @RequestParam(required = false) String url,
+                                 @RequestParam(required = false) String sourceType,
+                                 @RequestParam(required = false) Integer sortOrder,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            evidenceService.update(id, title, rationale, url, sourceType, sortOrder);
+            redirectAttributes.addFlashAttribute("successMessage", "근거를 수정했습니다.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/survey";
+    }
+
+    @PostMapping("/admin/survey/evidence/{id}/delete")
+    public String deleteEvidence(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        evidenceService.delete(id);
+        redirectAttributes.addFlashAttribute("successMessage", "근거를 삭제했습니다.");
         return "redirect:/admin/survey";
     }
 }

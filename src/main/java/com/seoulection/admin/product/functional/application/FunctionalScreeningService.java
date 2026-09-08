@@ -78,6 +78,27 @@ public class FunctionalScreeningService {
         return repository.findByProductId(productId);
     }
 
+    public boolean isEnabled() {
+        return properties.isEnabled();
+    }
+
+    /**
+     * <b>자동화의 진입점.</b> 어드민이 한글 이름을 저장한 직후에 불린다.
+     *
+     * <p>왜 하필 여기인가: 등록명(ITEM_NAME)은 전부 한글이고 브랜드 한글 표기로 시작한다.
+     * 영문 제품명만으로는 조회가 시작조차 안 되고, 한글 이름이 채워진 그 순간이 자동 조회가
+     * 가장 잘 듣는 시점이다. 그래서 4단계 마법사의 "한글 이름" 저장이 곧 기능성 조회 트리거다.
+     *
+     * <p>결과가 나오면 기능성까지 확정돼 다음 단계로 넘어가고, 못 찾으면 기능성 폼이 열린 채
+     * 후보만 채워진다 — 그때만 사람이 고른다.
+     */
+    public Optional<FunctionalScreening> screenAfterNameSaved(String productId) {
+        if (!properties.isEnabled()) {
+            return Optional.empty();
+        }
+        return Optional.of(screen(productId));
+    }
+
     /** 화면에서 쓰는 조회 — 판정이 없으면 그때 한 번 돌린다. */
     public Optional<FunctionalScreening> findOrScreen(String productId) {
         if (!properties.isEnabled()) {

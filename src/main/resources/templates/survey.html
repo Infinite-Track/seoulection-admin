@@ -53,6 +53,69 @@
                     </div>
                 </div>
 
+                <!--
+                  문항 근거 — "이 문항을 왜 묻는가". 링크만 모으면 이유는 여전히 사람 머릿속에
+                  남으므로 요약을 필수로 받는다. 1:N 이라 논문·가이드라인·임상 자료를 함께 붙인다.
+                -->
+                <div class="form-section evidence-section">
+                    <div class="form-section-title">
+                        근거
+                        <span class="count-inline"
+                              th:text="${evidenceByQuestion.containsKey(question.key)} ? ${evidenceByQuestion.get(question.key).size()} : 0">0</span>
+                    </div>
+
+                    <p class="form-help" th:if="${!evidenceByQuestion.containsKey(question.key)}">
+                        근거가 없습니다. 이 문항을 왜 묻는지 남겨 두면 나중에 문항을 고치거나 뺄 때 판단할 수 있습니다.
+                    </p>
+
+                    <div class="table-scroll" th:if="${evidenceByQuestion.containsKey(question.key)}">
+                        <table class="admin-table">
+                            <thead>
+                            <tr><th>종류</th><th>근거</th><th>관리</th></tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="evidence : ${evidenceByQuestion.get(question.key)}">
+                                <td><span class="badge badge-neutral" th:text="${evidence.sourceLabel()}">논문</span></td>
+                                <td>
+                                    <form class="option-form" th:action="@{'/admin/survey/evidence/' + ${evidence.id}}" method="post">
+                                        <input type="text" name="title" th:value="${evidence.title}" required aria-label="근거 제목">
+                                        <input type="url" name="url" th:value="${evidence.url}" placeholder="링크(선택)" aria-label="링크">
+                                        <input type="number" name="sortOrder" th:value="${evidence.sortOrder}" min="0" aria-label="순서">
+                                        <select name="sourceType" aria-label="근거 종류">
+                                            <option th:each="type : ${sourceTypes}" th:value="${type}" th:text="${type}"
+                                                    th:selected="${type == evidence.sourceType}"></option>
+                                        </select>
+                                        <textarea name="rationale" rows="2" required aria-label="묻는 이유"
+                                                  th:text="${evidence.rationale}"></textarea>
+                                        <button class="subtle" type="submit">저장</button>
+                                    </form>
+                                </td>
+                                <td class="admin-actions">
+                                    <a th:if="${evidence.hasUrl()}" th:href="${evidence.url}" target="_blank"
+                                       rel="noopener noreferrer" class="subtle">원문</a>
+                                    <form th:action="@{'/admin/survey/evidence/' + ${evidence.id} + '/delete'}" method="post"
+                                          onsubmit="return confirm('이 근거를 삭제할까요?');">
+                                        <button class="danger" type="submit">삭제</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <form class="option-form" th:action="@{'/admin/survey/questions/' + ${question.key} + '/evidence'}" method="post">
+                        <input type="text" name="title" placeholder="근거 제목" required aria-label="근거 제목">
+                        <input type="url" name="url" placeholder="링크(선택)" aria-label="링크">
+                        <select name="sourceType" aria-label="근거 종류">
+                            <option th:each="type : ${sourceTypes}" th:value="${type}" th:text="${type}"></option>
+                        </select>
+                        <input type="number" name="sortOrder" value="0" min="0" aria-label="순서">
+                        <textarea name="rationale" rows="2" required aria-label="묻는 이유"
+                                  placeholder="이 문항을 왜 묻는지 — 링크를 열지 않아도 알 수 있게"></textarea>
+                        <button class="btn-primary" type="submit">근거 추가</button>
+                    </form>
+                </div>
+
                 <div class="table-scroll" th:if="${!question.options.isEmpty()}">
                     <table class="admin-table option-table">
                         <thead>

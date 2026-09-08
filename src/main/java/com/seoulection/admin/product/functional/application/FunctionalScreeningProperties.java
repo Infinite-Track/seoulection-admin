@@ -9,12 +9,13 @@ public class FunctionalScreeningProperties {
     private boolean enabled = true;
 
     /**
-     * 자동 판정 결과로 제품 상태를 실제로 옮길지. 기본은 꺼짐 = <b>그림자 모드</b>.
+     * 자동 판정 결과로 제품 상태를 실제로 옮길지. 기본은 켜짐 — 한글 이름을 저장하면 그 자리에서
+     * 기능성까지 확정되고 어드민은 <b>자동이 못 찾은 것만</b> 손댄다.
      *
-     * <p>켜기 전에 몇 주 동안 자동 판정과 사람 판단을 나란히 두고 비교하라는 뜻이다.
-     * 기능성은 규제 정보라 틀린 자동 확정이 비어 있는 큐보다 훨씬 비싸다.
+     * <p>끄면 그림자 모드가 된다(판정은 기록하되 상태는 그대로). 판정 규칙을 크게 손본 뒤
+     * 사람 판단과 대조해 보고 싶을 때 쓰라고 남겨 둔 스위치다.
      */
-    private boolean applyDecisions = false;
+    private boolean applyDecisions = true;
 
     /** 이 점수 이상이면 LLM 판정 없이도 확정 후보가 된다(숫자·업체·유형 규칙은 그대로 통과해야 한다). */
     private double autoThreshold = 0.95;
