@@ -77,7 +77,7 @@ class ProductControllerTest {
                 .andExpect(redirectedUrl("/admin/products"))
                 .andExpect(flash().attribute("successMessage", "제품을 등록했습니다."));
 
-        then(service).should().register("시카 세럼", "서울렉션", "face masks", List.of());
+        then(service).should().register("시카 세럼", null, "서울렉션", "face masks", List.of());
     }
 
     @Test

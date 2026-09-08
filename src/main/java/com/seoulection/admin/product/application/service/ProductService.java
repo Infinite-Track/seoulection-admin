@@ -43,7 +43,19 @@ public class ProductService {
     }
 
     public ProductResult register(String name, String brand, String category, List<String> ingredients) {
-        ProductResult result = ProductResult.from(repository.insert(Product.pending(name, brand, category, ingredients)));
+        return register(name, null, brand, category, ingredients);
+    }
+
+    /**
+     * 신규 등록 — 한글 이름과 전성분까지 함께 받는다.
+     *
+     * <p>함량은 여기서 받지 않는다. 성분 행이 저장돼야 각 행에 붙일 수 있기 때문이다 —
+     * 등록 직후 성분 보완 탭으로 보내 그 자리에서 채우게 한다.
+     */
+    public ProductResult register(String name, String nameKo, String brand, String category,
+                                  List<String> ingredients) {
+        ProductResult result = ProductResult.from(
+                repository.insert(Product.pending(name, nameKo, brand, category, ingredients)));
         syncProductIngredients(result);
         return result;
     }

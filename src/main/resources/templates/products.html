@@ -180,6 +180,11 @@
                         <p class="error" th:if="${#fields.hasErrors('brand')}" th:errors="*{brand}"></p>
                     </div>
                     <div class="span-full">
+                        <label for="nameKo">제품 한글 이름<span class="optional-mark">선택</span></label>
+                        <input id="nameKo" th:field="*{nameKo}" placeholder="예) 구달 청귤 비타C 잡티 세럼" autocomplete="off">
+                        <p class="form-help">사용자 화면에서 영문명 대신 보여 줍니다. 지금 비워 두면 기능성 확인 탭에서 넣을 수 있습니다.</p>
+                    </div>
+                    <div class="span-full">
                         <span class="field-label">카테고리</span>
                         <div class="toggle-group">
                             <label class="toggle-option"><input type="radio" th:field="*{category}" value="sunscreens"><span>Sunscreens</span></label>
@@ -200,7 +205,8 @@
                     <div class="span-full">
                         <label for="ingredientsText">전성분(INCI) 직접 보완</label>
                         <textarea id="ingredientsText" th:field="*{ingredientsText}" rows="4" placeholder="성분을 쉼표 또는 줄바꿈으로 입력하세요."></textarea>
-                        <p class="form-help">파이프라인이 성분을 가져오지 못한 제품에만 사용합니다. 비워두면 파이프라인이 먼저 시도합니다.</p>
+                        <p class="form-help">파이프라인이 성분을 가져오지 못한 제품에만 사용합니다. 비워두면 파이프라인이 먼저 시도합니다.
+                            <br>여기에 성분을 넣으면 등록 직후 <strong>함량 입력 화면</strong>으로 이어집니다.</p>
                     </div>
                 </div>
             </div>

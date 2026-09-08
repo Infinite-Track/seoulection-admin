@@ -76,8 +76,20 @@ public class Product {
     }
 
     public static Product pending(String name, String brand, String category, List<String> ingredients) {
+        return pending(name, null, brand, category, ingredients);
+    }
+
+    /**
+     * 등록 시점에 한글 이름까지 받는다.
+     *
+     * <p>검수 단계까지 미루지 않는 이유: 어드민이 제품을 등록할 때는 이미 상세 페이지를 보고
+     * 있어서 한글 이름을 알고 있다. 그때 안 받으면 나중에 같은 제품을 다시 열어야 한다.
+     */
+    public static Product pending(String name, String nameKo, String brand, String category,
+                                  List<String> ingredients) {
         boolean hasIngredients = ingredients != null && !ingredients.isEmpty();
         return builder()
+                .nameKo(nameKo == null || nameKo.isBlank() ? null : nameKo.trim())
                 .name(name)
                 .brand(brand)
                 .category(ProductCategory.from(category))

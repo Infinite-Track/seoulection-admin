@@ -136,8 +136,15 @@ public class ProductController {
             model.addAttribute("registerFormOpen", true);
             return "products";
         }
-        service.register(request.getName(), request.getBrand(), request.getCategory(),
-                splitIngredients(request.getIngredientsText()));
+        List<String> ingredients = splitIngredients(request.getIngredientsText());
+        var created = service.register(request.getName(), request.getNameKo(), request.getBrand(),
+                request.getCategory(), ingredients);
+        // 성분을 함께 넣었으면 함량을 바로 채우게 성분 탭으로 보낸다. 함량은 성분 행이
+        // 저장된 뒤에야 붙일 수 있어 등록 폼에서 미리 받을 수 없다.
+        if (!ingredients.isEmpty()) {
+            redirectAttributes.addFlashAttribute("successMessage", "제품을 등록했습니다. 이어서 함량을 입력하세요.");
+            return "redirect:/admin/products/" + created.id() + "/workflow?step=ingredients";
+        }
         redirectAttributes.addFlashAttribute("successMessage", "제품을 등록했습니다.");
         return "redirect:/admin/products";
     }
