@@ -84,7 +84,7 @@ class FunctionalWorkflowViewTest {
         MfdsItem item = new MfdsItem(MfdsSource.REPORT, "닥터디퍼런트131모이스처라이저",
                 "주식회사다른코스메틱스", "2", "피부의 주름개선에 도움을 준다.", null, null,
                 "제10조 제1항 제1호", "20230405", false);
-        MfdsCandidate candidate = new MfdsCandidate(item, 0.94,
+        MfdsCandidate candidate = new MfdsCandidate(item, 0.94, 0.94,
                 new ClaimReading(List.of(ProductFunctionalCategory.WRINKLE_IMPROVEMENT), false, true),
                 false, true);
         return new FunctionalScreening("p1", ScreeningOutcome.NEEDS_REVIEW, List.of(),

@@ -44,6 +44,27 @@ public final class ItemName {
     }
 
     /**
+     * 우리 이름이 등록명에 얼마나 담겨 있는가(0~1). {@link #similarity}가 양쪽 길이를 모두
+     * 보는 것과 달리 <b>우리 쪽 길이로만</b> 나눈다.
+     *
+     * <p>왜 필요한가: 어드민이 "달바 워터풀"까지만 적으면 등록명 "달바워터풀톤업선크림"과의
+     * 유사도는 0.59다. 임계값에 걸려 후보에서 잘리는데, 정작 우리가 적은 이름은 등록명에
+     * <b>통째로</b> 들어 있다. 이럴 때 답은 "후보 없음"이 아니라 "이 브랜드의 이런 제품들이
+     * 있다"를 보여 주고 사람이 고르게 하는 것이다.
+     *
+     * <p>대신 자동 확정에는 쓰지 않는다 — 부분 이름은 여러 변형(선크림·선쿠션·커버베이지 21호…)에
+     * 똑같이 1.0이 나오므로 무엇 하나를 고를 근거가 못 된다.
+     */
+    public static double coverage(String query, String candidate) {
+        String a = normalize(query);
+        String b = normalize(candidate);
+        if (a.isEmpty() || b.isEmpty()) {
+            return 0.0;
+        }
+        return (double) longestCommonSubsequence(a, b) / a.length();
+    }
+
+    /**
      * 이름 안의 숫자 토큰. <b>자동 확정을 막는 하드 룰</b>의 근거다.
      *
      * <p>실측에서 "닥터디퍼런트 311 모이스처라이저"가 등록명 "닥터디퍼런트131모이스처라이저"와

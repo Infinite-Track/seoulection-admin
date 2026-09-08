@@ -90,6 +90,7 @@ public class FunctionalScreeningDocument {
         @Field("report_date")
         private String reportDate;
         private double score;
+        private double coverage;
         private List<ProductFunctionalCategory> claims;
         @Field("numeric_match")
         private boolean numericMatch;
@@ -111,6 +112,7 @@ public class FunctionalScreeningDocument {
             row.targetFlagName = item.targetFlagName();
             row.reportDate = item.reportDate();
             row.score = candidate.score();
+            row.coverage = candidate.coverage();
             row.claims = candidate.claims().categories();
             row.numericMatch = candidate.numericMatch();
             row.brandMatch = candidate.brandMatch();
@@ -122,7 +124,7 @@ public class FunctionalScreeningDocument {
         MfdsCandidate toDomain() {
             MfdsItem item = new MfdsItem(MfdsSource.valueOf(source), itemName, entpName, null, eeName,
                     spf, pa, targetFlagName, reportDate, false);
-            return new MfdsCandidate(item, score,
+            return new MfdsCandidate(item, score, coverage,
                     new ClaimReading(claims == null ? List.of() : claims, outOfScope, derivable),
                     numericMatch, brandMatch);
         }

@@ -22,8 +22,9 @@ spring:
 admin:
   functional-screening:
     enabled: ${FUNCTIONAL_SCREENING_ENABLED:true}
-    # 자동 확정을 실제 상태 전진(READY_FOR_INCIAPI)으로 옮길지. 끄면 그림자 모드(판정만 기록).
-    apply-decisions: true
+    # 자동 판정이 상태까지 바로 옮길지. 기본은 꺼짐 — 조회는 근거를 모아 폼을 채워 두고,
+    # 확정은 어드민이 저장을 눌러 한다. 일치율을 충분히 본 뒤에 켤 스위치다.
+    apply-decisions: ${FUNCTIONAL_SCREENING_APPLY:false}
     auto-threshold: 0.95        # 이 점수 이상이면 LLM 판정 없이도 확정 후보
     candidate-threshold: 0.60   # 이 미만은 후보로도 남기지 않는다
     max-candidates: 5

@@ -78,3 +78,35 @@
     const serverOpened = document.querySelector('.drawer.is-open');
     if (serverOpened) open(serverOpened, null);
 })();
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   외부 호출(안전나라 조회·LLM 이름 해석) 대기 표시.
+
+   data-busy="문구" 가 붙은 폼이 제출되면 버튼을 잠그고 문구를 바꾼다. 잠그는 게 핵심이다 —
+   응답이 늦으면 어드민이 한 번 더 누르고, 서버는 같은 외부 API 를 두 번 부른다.
+
+   ⚠️ 버튼을 disabled 로 만들면 그 버튼의 name/value 가 폼 데이터에서 빠진다. 여기서는
+   제출값으로 쓰는 버튼이 없어 문제가 없지만, 값을 실어 보내는 버튼에 붙일 때는
+   hidden 으로 옮기고 잠글 것.
+   ───────────────────────────────────────────────────────────────────────────── */
+(() => {
+    const showBar = () => {
+        if (document.querySelector('.busy-bar')) return;
+        const bar = document.createElement('div');
+        bar.className = 'busy-bar';
+        document.body.appendChild(bar);
+    };
+
+    document.querySelectorAll('form[data-busy]').forEach((form) => {
+        form.addEventListener('submit', () => {
+            const label = form.dataset.busy || '처리 중…';
+            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach((button) => {
+                button.classList.add('is-busy');
+                button.innerHTML = '<span class="spinner"></span>' + label;
+            });
+            form.classList.add('is-busy');
+            showBar();
+        });
+    });
+})();

@@ -9,13 +9,15 @@ public class FunctionalScreeningProperties {
     private boolean enabled = true;
 
     /**
-     * 자동 판정 결과로 제품 상태를 실제로 옮길지. 기본은 켜짐 — 한글 이름을 저장하면 그 자리에서
-     * 기능성까지 확정되고 어드민은 <b>자동이 못 찾은 것만</b> 손댄다.
+     * 자동 판정 결과로 제품 상태까지 바로 옮길지. <b>기본은 꺼짐</b>.
      *
-     * <p>끄면 그림자 모드가 된다(판정은 기록하되 상태는 그대로). 판정 규칙을 크게 손본 뒤
-     * 사람 판단과 대조해 보고 싶을 때 쓰라고 남겨 둔 스위치다.
+     * <p>자동 조회는 근거를 모아 폼을 채워 두는 데까지만 하고, 확정은 어드민이 누른다.
+     * 기능성은 규제 정보라 "모델이 골랐다"와 "사람이 확인했다" 사이에 한 칸이 있어야 한다 —
+     * 자동 판정이 틀렸을 때 되돌리는 비용이 한 번 더 클릭하는 비용보다 훨씬 크다.
+     *
+     * <p>켜면 판정이 끝나는 즉시 상태가 전진한다. 일치율을 충분히 확인한 뒤에 켤 스위치다.
      */
-    private boolean applyDecisions = true;
+    private boolean applyDecisions = false;
 
     /** 이 점수 이상이면 LLM 판정 없이도 확정 후보가 된다(숫자·업체·유형 규칙은 그대로 통과해야 한다). */
     private double autoThreshold = 0.95;
@@ -23,8 +25,14 @@ public class FunctionalScreeningProperties {
     /** 이 점수 미만은 후보로도 남기지 않는다. 표를 후보로 채워 놓으면 검수가 더 느려진다. */
     private double candidateThreshold = 0.60;
 
-    /** 화면에 남길 후보 수. */
-    private int maxCandidates = 5;
+    /**
+     * 우리가 적은 이름이 등록명에 이 비율 이상 담겨 있으면, 유사도가 낮아도 후보로 남긴다.
+     * 제품명을 일부만 입력한 경우를 건지기 위한 값이다.
+     */
+    private double coverageThreshold = 0.95;
+
+    /** 화면에 남길 후보 수. 이름을 일부만 적으면 같은 계열이 여럿 걸려 넉넉해야 한다. */
+    private int maxCandidates = 8;
 
     /**
      * "기능성 아님"까지 자동 확정할지. 기본은 꺼짐.
@@ -45,6 +53,8 @@ public class FunctionalScreeningProperties {
     public void setAutoThreshold(double autoThreshold) { this.autoThreshold = autoThreshold; }
     public double getCandidateThreshold() { return candidateThreshold; }
     public void setCandidateThreshold(double candidateThreshold) { this.candidateThreshold = candidateThreshold; }
+    public double getCoverageThreshold() { return coverageThreshold; }
+    public void setCoverageThreshold(double value) { this.coverageThreshold = value; }
     public int getMaxCandidates() { return maxCandidates; }
     public void setMaxCandidates(int maxCandidates) { this.maxCandidates = maxCandidates; }
     public boolean isAutoConcludeNone() { return autoConcludeNone; }

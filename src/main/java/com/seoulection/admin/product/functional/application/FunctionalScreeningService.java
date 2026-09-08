@@ -82,6 +82,11 @@ public class FunctionalScreeningService {
         return properties.isEnabled();
     }
 
+    /** 자동 판정이 상태까지 옮기는 모드인가. 화면 문구와 이동 경로가 이걸로 갈린다. */
+    public boolean appliesDecisions() {
+        return properties.isApplyDecisions();
+    }
+
     /**
      * <b>자동화의 진입점.</b> 어드민이 한글 이름을 저장한 직후에 불린다.
      *
@@ -203,7 +208,7 @@ public class FunctionalScreeningService {
         }
 
         MfdsCandidate top = candidates.get(0);
-        if (top.confirmable(properties.getAutoThreshold())) {
+        if (top.confirmable(properties.getAutoThreshold()) && !top.partialNameMatch()) {
             return confirmed(target, candidates, 0, "등록명이 거의 일치합니다", brandCount);
         }
 
@@ -326,7 +331,11 @@ public class FunctionalScreeningService {
                 continue; // 취하된 등록은 근거가 되지 못한다.
             }
             MfdsCandidate candidate = MfdsCandidate.of(item, query, brandKo, brandEntpName);
-            if (candidate.score() < properties.getCandidateThreshold()) {
+            // 점수가 낮아도, 우리가 적은 이름이 등록명에 통째로 들어 있으면 후보로 남긴다.
+            // 어드민이 "달바 워터풀"까지만 적은 경우가 여기다 — 유사도는 0.59라 잘리지만
+            // 정작 맞는 제품이 그 안에 있다.
+            boolean covered = candidate.coverage() >= properties.getCoverageThreshold();
+            if (candidate.score() < properties.getCandidateThreshold() && !covered) {
                 continue;
             }
             String key = item.source() + "|" + ItemName.normalize(item.itemName()) + "|" + item.entpName();

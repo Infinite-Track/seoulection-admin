@@ -27,9 +27,17 @@ public record ScreeningTarget(
         return nameKo == null || nameKo.isBlank() ? name : nameKo;
     }
 
-    /** 등록명은 대개 브랜드로 시작한다 — 비교 대상도 같은 모양으로 만든다. */
+    /**
+     * 등록명은 대개 브랜드로 시작한다 — 비교 대상도 같은 모양으로 만든다.
+     *
+     * <p>⚠️ 이름이 이미 브랜드로 시작하면 붙이지 않는다. 어드민은 한글 이름을 "달바 워터풀"처럼
+     * 브랜드까지 넣어 적는 경우가 많고, 그때 앞에 또 붙이면 "달바달바워터풀"로 조회돼
+     * <b>한 건도 안 나온다</b>.
+     */
     public String brandedName(String brandKo) {
         String prefix = brandKo == null || brandKo.isBlank() ? brand : brandKo;
-        return prefix + displayName();
+        String name = displayName();
+        return com.seoulection.admin.product.functional.domain.ItemName.startsWithBrand(name, prefix)
+                ? name : prefix + name;
     }
 }

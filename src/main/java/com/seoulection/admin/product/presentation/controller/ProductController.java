@@ -325,17 +325,45 @@ public class ProductController {
         }
 
         FunctionalScreening screening = screened.get();
-        if (screening.outcome().decided()) {
+        if (screening.outcome().decided() && screeningService.appliesDecisions()) {
             // 규제 정보가 조용히 저장되고 화면만 넘어가면 나중에 되짚을 실마리가 없다 —
             // 무엇이 어떤 근거로 기록됐는지 문구로 남긴다.
             redirectAttributes.addFlashAttribute("successMessage",
                     "한글 이름을 저장하고 기능성을 자동 확정했습니다 — " + describe(screening));
             return "redirect:/admin/products?stage=functional-review";
         }
+        if (screening.outcome().decided()) {
+            // 판정은 끝났지만 확정은 사람이 한다. 폼이 미리 채워진 채로 열리고, 어드민은
+            // 근거를 보고 저장만 누르면 된다.
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "자동 조회 결과를 아래에 채워 두었습니다 — " + describe(screening)
+                            + " 확인 후 저장을 눌러 확정해 주세요.");
+            return "redirect:/admin/products/" + id + "/workflow?step=functional";
+        }
         redirectAttributes.addFlashAttribute("errorMessage",
                 "자동 조회로 확정하지 못했습니다(" + screening.outcome().displayName() + "): "
                         + screening.reason() + " 아래에서 직접 확인해 주세요.");
         return "redirect:/admin/products/" + id + "/workflow?step=functional";
+    }
+
+    /**
+     * 자동 판정 결과를 검수 폼에 미리 채운다. 어드민은 근거를 보고 저장만 누르면 된다.
+     *
+     * <p>⚠️ <b>"기능성 아님"은 미리 고르지 않는다.</b> 확인 없이 저장만 눌러도 식약처 기능성이
+     * 아니라는 사실이 기록되는 게 이 폼에서 가장 비싼 실수이고, 자동 조회가 못 찾은 것과
+     * 실제로 기능성이 아닌 것은 겉보기가 같다. 반대로 유형이 나온 경우는 안전나라 응답이라는
+     * 근거가 있으므로 채워 둔다.
+     *
+     * <p>이미 검수를 마친 제품은 건드리지 않는다 — 사람이 정한 값을 자동 판정이 덮으면 안 된다.
+     */
+    private void prefillFromScreening(ProductRegisterRequest request,
+                                      com.seoulection.admin.product.application.dto.ProductResult product,
+                                      FunctionalScreening screening) {
+        if (screening == null || product.status().functionalReviewDone() || screening.claims().isEmpty()) {
+            return;
+        }
+        request.setFunctionResult("CONFIRMED");
+        request.setFunction(screening.claims().stream().map(Enum::name).toList());
     }
 
     /** 자동 확정 결과 문구. 유형이 비어 있으면 "기능성 아님"으로 확정된 것이다. */
@@ -432,7 +460,9 @@ public class ProductController {
         if ("functional".equals(resolved)) {
             // 한글 이름이 이미 있으면 화면을 여는 것만으로 자동 조회가 한 번 돈다. 없으면
             // 조회할 근거가 없으니 아무것도 하지 않고 입력 칸만 보여 준다.
-            model.addAttribute("screening", screeningService.findOrScreen(id).orElse(null));
+            var screening = screeningService.findOrScreen(id).orElse(null);
+            model.addAttribute("screening", screening);
+            prefillFromScreening(request, product, screening);
         }
         return "product-workflow";
     }

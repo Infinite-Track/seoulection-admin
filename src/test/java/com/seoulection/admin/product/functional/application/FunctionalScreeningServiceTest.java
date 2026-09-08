@@ -73,8 +73,9 @@ class FunctionalScreeningServiceTest {
     }
 
     @Test
-    @DisplayName("등록명이 거의 일치하면 자동 확정하고 상태까지 옮긴다")
+    @DisplayName("적용 모드를 켜면 자동 확정이 상태까지 옮긴다")
     void confirmsAndAdvancesStatus() {
+        properties.setApplyDecisions(true);
         catalog.brand("구달", List.of(
                 item("구달청귤비타씨잡티세럼", "(주)클리오",
                         "피부의 미백에 도움을 준다. 피부의 주름개선에 도움을 준다.", null, null)));
@@ -122,6 +123,7 @@ class FunctionalScreeningServiceTest {
         assertThat(service().screen(target).outcome()).isEqualTo(ScreeningOutcome.NOT_MATCHED);
 
         properties.setAutoConcludeNone(true);
+        properties.setApplyDecisions(true);
         FunctionalScreening screening = service().screen(target);
         assertThat(screening.outcome()).isEqualTo(ScreeningOutcome.AUTO_NONE);
         assertThat(screening.claims()).isEmpty();
@@ -141,9 +143,8 @@ class FunctionalScreeningServiceTest {
     }
 
     @Test
-    @DisplayName("그림자 모드에서는 판정만 기록하고 상태는 그대로 둔다")
-    void shadowModeRecordsWithoutAdvancing() {
-        properties.setApplyDecisions(false);
+    @DisplayName("기본값에서는 판정만 기록하고 상태는 어드민이 확정한다")
+    void doesNotAdvanceByDefault() {
         catalog.brand("구달", List.of(
                 item("구달청귤비타씨잡티세럼", "(주)클리오", "피부의 미백에 도움을 준다.", null, null)));
 

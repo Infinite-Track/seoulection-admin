@@ -98,7 +98,7 @@
                     </div>
                     <!-- ── 자동 조회. 한글 이름이 트리거다 — 안전나라 등록명이 전부 한글이라
                          영문명으로는 조회가 시작조차 안 된다. ── -->
-                    <form class="form-section"
+                    <form class="form-section" data-busy="의약품안전나라 조회 중…"
                           th:action="@{'/admin/products/' + ${product.id} + '/workflow/functional-screening'}" method="post">
                         <div class="form-section-title">한글 이름으로 자동 조회</div>
                         <div class="form-grid">
@@ -252,5 +252,6 @@
         }
     })();
 </script>
+<script th:src="@{/js/admin.js}"></script>
 </body>
 </html>

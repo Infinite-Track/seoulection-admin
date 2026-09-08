@@ -9,6 +9,7 @@ package com.seoulection.admin.product.functional.domain;
 public record MfdsCandidate(
         MfdsItem item,
         double score,
+        double coverage,
         ClaimReading claims,
         boolean numericMatch,
         boolean brandMatch
@@ -18,6 +19,7 @@ public record MfdsCandidate(
         return new MfdsCandidate(
                 item,
                 ItemName.similarity(queryName, item.itemName()),
+                ItemName.coverage(queryName, item.itemName()),
                 FunctionalClaims.read(item),
                 ItemName.numericTokensMatch(queryName, item.itemName()),
                 entpMatch || ItemName.startsWithBrand(item.itemName(), brand));
@@ -26,6 +28,16 @@ public record MfdsCandidate(
     /** 점수만으로 자동 확정해도 되는 후보인가. LLM 판정과는 별개로 항상 함께 본다. */
     public boolean confirmable(double autoThreshold) {
         return score >= autoThreshold && numericMatch && brandMatch && claims.autoConfirmable();
+    }
+
+    /**
+     * 이름을 부분만 적어 후보로 남은 건가. 화면이 "왜 이게 후보인지"를 설명할 때 쓴다.
+     *
+     * <p>이런 후보는 자동 확정되지 않는다 — "달바 워터풀"에는 선크림·선쿠션·커버베이지 21호가
+     * 모두 1.0으로 걸려서 무엇 하나를 고를 근거가 없다.
+     */
+    public boolean partialNameMatch() {
+        return coverage >= 0.95 && score < 0.9;
     }
 
     /** 자동 확정을 막은 이유. 화면에 그대로 보여 준다. */
@@ -38,6 +50,9 @@ public record MfdsCandidate(
         }
         if (!claims.autoConfirmable()) {
             return claims.reason();
+        }
+        if (partialNameMatch()) {
+            return "제품명을 일부만 입력해 같은 계열이 여러 건 걸립니다 — 맞는 것을 골라 주세요";
         }
         return "";
     }
