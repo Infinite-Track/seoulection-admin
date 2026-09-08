@@ -25,9 +25,13 @@ admin:
     # 자동 판정이 상태까지 바로 옮길지. 기본은 꺼짐 — 조회는 근거를 모아 폼을 채워 두고,
     # 확정은 어드민이 저장을 눌러 한다. 일치율을 충분히 본 뒤에 켤 스위치다.
     apply-decisions: ${FUNCTIONAL_SCREENING_APPLY:false}
-    auto-threshold: 0.95        # 이 점수 이상이면 LLM 판정 없이도 확정 후보
+    auto-threshold: 0.95        # 이 점수 이상이면 판정 없이도 확정 후보(숫자·업체·유형 규칙은 별도)
     candidate-threshold: 0.60   # 이 미만은 후보로도 남기지 않는다
     max-candidates: 8   # 이름을 일부만 적으면 같은 계열이 여럿 걸린다
+    coverage-threshold: 0.95    # 이름을 일부만 적은 경우를 건지는 값(자동 확정에는 쓰지 않음)
+    judge-pool-size: 20         # 판정에 넘길 등록 건 수 — 유사도로 거르지 않고 통째로 보여 준다
+    max-brand-aliases: 4        # 브랜드 한글 표기 후보 수. 전부 조회해 합친다
+    max-search-terms: 8         # 등록명 검색어 상한(규칙 2 + 모델이 만든 변형)
     # "기능성 아님"까지 자동 확정할지. 검색 실패와 구분이 어려워 기본은 꺼 둔다 —
     # 브랜드 등록이 0건일 때만 켤 만하고, 선크림처럼 법적으로 기능성이어야 하는 건 제외된다.
     auto-conclude-none: false

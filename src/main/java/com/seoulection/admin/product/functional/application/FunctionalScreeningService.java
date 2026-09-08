@@ -220,6 +220,7 @@ public class FunctionalScreeningService {
                 .limit(properties.getMaxCandidates())
                 .toList();
 
+        // 점수만으로 확정되는 경우(auto-threshold 기본 0.95 + 숫자·업체·유형 규칙 통과).
         if (!strong.isEmpty() && strong.get(0).confirmable(properties.getAutoThreshold())
                 && !strong.get(0).partialNameMatch()) {
             return confirmed(target, strong, 0, "등록명이 거의 일치합니다", brandCount);
@@ -255,13 +256,16 @@ public class FunctionalScreeningService {
                 .limit(Math.max(properties.getMaxCandidates() - 1, 0))
                 .forEach(withChosen::add);
 
-        if (verdict.high() && chosen.numericMatch() && chosen.brandMatch() && chosen.claims().autoConfirmable()) {
-            return confirmed(target, withChosen, 0, verdict.reason(), brandCount);
-        }
+        // ⚠️ 판정이 골랐다고 확정하지 않는다. 이름이 완전히 같은 경우(위 분기)를 빼면 확정은
+        //    사람 몫이다 — 모델이 고른 근거가 아무리 그럴듯해도 등록명이 다르다는 건 다른 제품일
+        //    수 있다는 뜻이고, 기능성은 틀렸을 때 되돌리는 비용이 한 번 더 클릭하는 것보다 크다.
+        //    대신 고른 것을 맨 앞에 세우고 유형까지 채워 둬서, 맞으면 저장만 누르면 되게 한다.
         String block = chosen.blockReason();
+        String reason = block.isBlank()
+                ? "가장 가까운 건으로 " + chosen.item().itemName() + " 을(를) 골랐습니다: " + verdict.reason()
+                : block;
         return new FunctionalScreening(target.id(), ScreeningOutcome.NEEDS_REVIEW, chosen.claims().categories(),
-                withChosen, 0, verdict.confidence(),
-                block.isBlank() ? "판정 신뢰도가 낮아 확인이 필요합니다: " + verdict.reason() : block,
+                withChosen, 0, verdict.confidence(), reason,
                 brandCount, FunctionalScreening.DECIDED_BY_AUTO, FunctionalScreening.ENGINE_VERSION, Instant.now());
     }
 

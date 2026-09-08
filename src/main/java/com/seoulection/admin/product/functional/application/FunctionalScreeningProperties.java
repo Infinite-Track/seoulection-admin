@@ -19,7 +19,14 @@ public class FunctionalScreeningProperties {
      */
     private boolean applyDecisions = false;
 
-    /** 이 점수 이상이면 LLM 판정 없이도 확정 후보가 된다(숫자·업체·유형 규칙은 그대로 통과해야 한다). */
+    /**
+     * 자동 확정에 필요한 점수. 이름이 이 정도로 같으면 판정을 부르지 않고 확정 후보로 본다.
+     *
+     * <p>다만 점수 하나로 확정되지는 않는다 — 숫자 토큰 일치, 업체명 연결, 기능성 유형 도출을
+     * 모두 통과해야 한다({@code MfdsCandidate.confirmable}). 실측에서 "닥터디퍼런트 311
+     * 모이스처라이저"가 등록명 "닥터디퍼런트131모이스처라이저"와 0.94 였는데, 그건 숫자
+     * 규칙에서 걸린다.
+     */
     private double autoThreshold = 0.95;
 
     /** 이 점수 미만은 후보로도 남기지 않는다. 표를 후보로 채워 놓으면 검수가 더 느려진다. */

@@ -141,6 +141,11 @@
                             <tr th:each="candidate, iter : ${screening.candidates}"
                                 th:classappend="${iter.index == screening.selectedIndex} ? ' is-selected' : ''">
                                 <td>
+                                    <!-- 판정이 고른 행. 클래스만 붙여 놓으면 스타일이 없을 때
+                                         화면에 아무것도 안 나타난다 — 글자로도 남긴다. -->
+                                    <span class="data-chip is-picked" th:if="${iter.index == screening.selectedIndex}">
+                                        AI 지목
+                                    </span>
                                     <span th:text="${candidate.item.itemName}"></span>
                                     <span class="data-chip" th:text="${candidate.item.source.displayName()}"></span>
                                 </td>
