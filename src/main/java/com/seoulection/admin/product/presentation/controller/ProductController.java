@@ -254,9 +254,14 @@ public class ProductController {
             return "redirect:/admin/products/" + id + "/workflow";
         }
         service.reviewIngredients(id, ingredients, ingredientNotFound);
+        // 성분을 찾지 못했으면 채울 함량이 없으니 큐로 돌아간다. 찾았으면 같은 탭에 남아
+        // 방금 저장된 성분 목록에 함량을 채우게 한다 — 화면을 옮기면 맥락이 끊긴다.
+        if (ingredientNotFound) {
+            redirectAttributes.addFlashAttribute("successMessage", "성분을 찾지 못함으로 저장했습니다.");
+            return "redirect:/admin/products?stage=ingredient-review";
+        }
         redirectAttributes.addFlashAttribute("successMessage", "전성분을 저장했습니다. 이어서 함량을 입력하세요.");
-        // 성분을 찾지 못한 제품은 채울 함량이 없다 → 함량 단계를 건너뛴다.
-        return "redirect:/admin/products/" + id + "/workflow?step=" + (ingredientNotFound ? "name" : "concentrations");
+        return "redirect:/admin/products/" + id + "/workflow?step=ingredients";
     }
 
     /** 2단계 저장 — 식약처 기능성만. 저장 후 기능성 확인 큐로 돌아간다. */
@@ -267,6 +272,13 @@ public class ProductController {
         if (result == null || result.isBlank()) {
             redirectAttributes.addFlashAttribute("errorMessage", "의약품안전나라 조회 결과를 선택해 주세요.");
             return "redirect:/admin/products/" + id + "/workflow";
+        }
+        // 한글 이름은 기능성과 같은 탭에서 받는다. 비워 두면 유지한다 —
+        // 지우려는 의도와 구분할 수 없어 덮어쓰지 않는다.
+        String nameKo = request.getNameKo();
+        if (nameKo != null && !nameKo.isBlank()) {
+            var current = service.getProduct(id);
+            service.updateBasicInfo(id, current.name(), nameKo.trim(), current.brand(), current.category());
         }
         boolean confirmed = "CONFIRMED".equals(result);
         boolean hasFunction = !request.getFunction().isEmpty();
@@ -281,41 +293,12 @@ public class ProductController {
     }
 
     /**
-     * 검수 단계 순서. 화면의 단계 표시와 "다음" 이동이 이 순서를 따른다.
+     * 검수 탭. 기존 2탭 구조를 지킨다 — 성분 보완(성분+함량)과 기능성 확인(한글 이름+기능성).
      *
-     * <p>순서가 이 모양인 이유: 함량은 성분이 있어야 채울 수 있고, 기능성 확인은 성분을 보고
-     * 판단한다. 한글 이름은 성분과 무관하지만 기능성보다 가벼워 앞에 둔다.
+     * <p>탭을 더 쪼개지 않는 이유: 근거 자료가 다른 두 작업이라 나누는 것이지, 입력 항목마다
+     * 나누면 저장 버튼만 늘고 어드민이 같은 제품을 네 번 열게 된다.
      */
-    private static final List<String> WORKFLOW_STEPS = List.of("ingredients", "concentrations", "name", "functional");
-
-    /** 다음 단계 경로. 마지막 단계면 null 이다. */
-    private String nextStep(String current) {
-        int index = WORKFLOW_STEPS.indexOf(current);
-        return index < 0 || index + 1 >= WORKFLOW_STEPS.size() ? null : WORKFLOW_STEPS.get(index + 1);
-    }
-
-    /** 2단계 — 함량·특성은 행마다 따로 저장한다(조각 안의 폼). 여기서는 다음 단계로만 넘긴다. */
-    @PostMapping("/admin/products/{id}/workflow/concentrations")
-    public String workflowConcentrations(@PathVariable String id, RedirectAttributes redirectAttributes) {
-        redirectAttributes.addFlashAttribute("successMessage", "함량 입력을 마쳤습니다.");
-        return "redirect:/admin/products/" + id + "/workflow?step=name";
-    }
-
-    /**
-     * 3단계 — 제품 한글 이름. MongoDB {@code products.name_ko} 에 저장된다.
-     *
-     * <p>비워 두면 기존 값을 유지한다 — 지우려는 의도와 구분할 수 없어 덮어쓰지 않는다.
-     */
-    @PostMapping("/admin/products/{id}/workflow/name")
-    public String workflowName(@PathVariable String id, @RequestParam(required = false) String nameKo,
-                               RedirectAttributes redirectAttributes) {
-        if (nameKo != null && !nameKo.isBlank()) {
-            var current = service.getProduct(id);
-            service.updateBasicInfo(id, current.name(), nameKo.trim(), current.brand(), current.category());
-            redirectAttributes.addFlashAttribute("successMessage", "한글 이름을 저장했습니다.");
-        }
-        return "redirect:/admin/products/" + id + "/workflow?step=functional";
-    }
+    private static final List<String> WORKFLOW_STEPS = List.of("ingredients", "functional");
 
     /**
      * 검수 작업 화면. 어느 단계를 열지는 제품 상태가 정한다({@link ProductStatus#workflowStep()}).
@@ -353,7 +336,7 @@ public class ProductController {
         model.addAttribute("workflowStep", resolved);
         model.addAttribute("workflowSteps", WORKFLOW_STEPS);
         model.addAttribute("workflowStepIndex", WORKFLOW_STEPS.indexOf(resolved));
-        if ("concentrations".equals(resolved)) {
+        if ("ingredients".equals(resolved)) {
             model.addAttribute("productIngredients", service.getProductIngredients(id));
             model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         }
