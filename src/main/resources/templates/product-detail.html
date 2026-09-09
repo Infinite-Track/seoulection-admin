@@ -66,21 +66,90 @@
             </section>
 
             <section class="card is-flush">
-                <div class="panel-header"><div><h2>구매 링크</h2><p class="card-subtitle">도메인별 구매 링크를 관리합니다.</p></div></div>
-                <div class="form-section" th:if="${purchaseLinks != null && !purchaseLinks.isEmpty()}">
-                    <div th:each="link : ${purchaseLinks}" class="link-row">
-                        <a th:href="${link.url}" th:text="${link.url}" target="_blank" rel="noopener"></a>
-                        <span class="data-chip is-neutral" th:text="${link.domain}"></span>
-                        <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/delete'}" method="post"><button class="btn-ghost" type="submit">삭제</button></form>
+                <div class="panel-header">
+                    <div>
+                        <h2>구매 링크<span class="count-inline"
+                                       th:if="${purchaseLinks != null && !purchaseLinks.isEmpty()}"
+                                       th:text="${purchaseLinks.size()}">0</span></h2>
+                        <p class="card-subtitle">사용자 화면의 "구매하기"가 여기로 나갑니다. 도메인·지역별로 하나씩 둡니다.</p>
                     </div>
                 </div>
-                <p class="empty" th:if="${purchaseLinks == null || purchaseLinks.isEmpty()}">등록된 구매 링크가 없습니다.</p>
-                <form class="form-section inline-form" th:action="@{'/admin/products/' + ${product.id} + '/purchase-links'}" method="post">
-                    <input name="url" type="url" required placeholder="https://example.com/product" aria-label="구매 링크">
-                    <input name="domain" placeholder="도메인 (예: oliveyoung)" aria-label="도메인">
-                    <input name="region" value="US" maxlength="8" placeholder="지역" aria-label="지역">
-                    <button class="btn-primary" type="submit">링크 추가</button>
-                </form>
+
+                <!-- 선택지·성분 표와 같은 모양으로 둔다. 전에는 스타일 없는 div 를 쌓아
+                     링크·도메인·삭제가 줄줄이 흘렀다. -->
+                <div class="table-scroll" th:if="${purchaseLinks != null && !purchaseLinks.isEmpty()}">
+                    <table class="admin-table">
+                        <thead>
+                        <tr><th>도메인</th><th>지역</th><th>링크</th><th>상태</th><th>관리</th></tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="link : ${purchaseLinks}" th:classappend="${link.active} ? '' : 'is-inactive'">
+                            <td>
+                                <span class="data-chip is-neutral" th:if="${link.domain != null}" th:text="${link.domain}">oliveyoung</span>
+                                <span class="pending" th:if="${link.domain == null}">미지정</span>
+                            </td>
+                            <td><code th:text="${link.region}">US</code></td>
+                            <!-- 링크는 길다. 표를 밀지 않게 잘라 보여 주고 전문은 title 로 남긴다. -->
+                            <td class="link-cell">
+                                <a th:href="${link.url}" th:text="${link.url}" th:title="${link.url}"
+                                   target="_blank" rel="noopener noreferrer">https://…</a>
+                            </td>
+                            <td>
+                                <span class="badge badge-success" th:if="${link.active}">노출</span>
+                                <span class="badge badge-neutral" th:unless="${link.active}">숨김</span>
+                            </td>
+                            <td class="admin-actions">
+                                <!-- 지우기 전에 숨기기를 먼저 권한다. 품절·일시 장애면 되살리는 편이 낫다. -->
+                                <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/active'}" method="post">
+                                    <input type="hidden" name="active" th:value="${!link.active}">
+                                    <button class="subtle" type="submit"
+                                            th:text="${link.active} ? '숨기기' : '노출하기'">숨기기</button>
+                                </form>
+                                <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/delete'}"
+                                      method="post" onsubmit="return confirm('이 구매 링크를 삭제할까요? 일시적인 문제라면 숨기기를 쓰세요.');">
+                                    <button class="danger" type="submit">삭제</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="empty" th:if="${purchaseLinks == null || purchaseLinks.isEmpty()}">
+                    <span>등록된 구매 링크가 없습니다. 링크가 없으면 사용자 화면에 "구매하기"가 뜨지 않습니다.</span>
+                </div>
+
+                <!-- 카탈로그에 없는 제품에는 FK 때문에 링크를 달 수 없다. 폼을 감추고 이유를 적는다 —
+                     눌러 보고 실패를 알게 하면 그게 곧 흰 화면이었다. -->
+                <div class="empty" th:unless="${catalogRegistered}">
+                    <span>아직 사용자 카탈로그에 등록되지 않은 제품입니다. 분석이 끝나 카탈로그에 올라간 뒤에 구매 링크를 추가할 수 있습니다.</span>
+                </div>
+
+                <div class="form-section" th:if="${catalogRegistered}">
+                    <div class="form-section-title">링크 추가</div>
+                    <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links'}" method="post">
+                        <div class="form-grid cols-4">
+                            <div class="span-full url-field">
+                                <label for="purchaseUrl">구매 링크</label>
+                                <input id="purchaseUrl" name="url" type="url" required
+                                       placeholder="https://oliveyoung.co.kr/product/..." autocomplete="off">
+                            </div>
+                            <div>
+                                <label for="purchaseDomain">판매처<span class="optional-mark">선택</span></label>
+                                <input id="purchaseDomain" name="domain" placeholder="oliveyoung" autocomplete="off">
+                                <p class="form-help">비워 두면 링크에서 유추합니다.</p>
+                            </div>
+                            <div>
+                                <label for="purchaseRegion">지역</label>
+                                <input id="purchaseRegion" name="region" value="US" maxlength="8" placeholder="US">
+                                <p class="form-help">국가 코드. 같은 판매처라도 지역마다 링크가 다릅니다.</p>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn-primary" type="submit">링크 추가</button>
+                        </div>
+                    </form>
+                </div>
             </section>
 
             <section class="card is-flush">

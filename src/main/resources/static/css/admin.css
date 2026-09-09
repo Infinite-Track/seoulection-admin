@@ -244,7 +244,10 @@ label, .field-label {
     color: var(--text-primary);
 }
 
-input[type=text], input[type=number], input:not([type]) {
+/* ⚠️ 새 input type 을 쓰면 여기에 추가할 것. 빠지면 그 칸만 스타일이 아예 안 먹어
+   작고 각진 브라우저 기본 입력으로 보인다 — url 칸이 그 상태였다(2026-09-09). */
+input[type=text], input[type=number], input[type=url], input[type=email],
+input[type=search], input:not([type]) {
     width: 100%;
     height: 42px;
     padding: 0 13px;
@@ -1180,3 +1183,23 @@ td a:hover { text-decoration: underline; }
     font-weight: 600;
     margin-right: 0.35em;
 }
+
+/* 구매 링크 표 — URL 이 길어 표를 밀지 않게 잘라 둔다(전문은 title 에 남는다). */
+.link-cell { max-width: 380px; }
+.link-cell a {
+    display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: var(--accent); font-size: 12.5px; text-decoration: none;
+}
+.link-cell a:hover { text-decoration: underline; }
+
+
+/* 구매 링크 입력 — URL 은 길고 오타가 치명적이라 다른 칸보다 크게 둔다.
+   (잘못된 링크는 사용자가 빈 페이지로 나가는 결과가 된다) */
+.url-field input[type=url] {
+    height: 48px;
+    border-radius: var(--radius-md);
+    padding: 0 16px;
+    font-size: 14.5px;
+    letter-spacing: -0.1px;
+}
+.url-field label { font-size: 13px; }

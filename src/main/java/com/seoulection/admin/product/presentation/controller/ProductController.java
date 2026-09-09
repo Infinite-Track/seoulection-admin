@@ -8,6 +8,7 @@ import com.seoulection.admin.product.domain.enums.ProductStage;
 import com.seoulection.admin.product.domain.enums.ProductStatus;
 import com.seoulection.admin.product.presentation.dto.ProductRegisterRequest;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -31,6 +32,8 @@ import com.seoulection.admin.product.infrastructure.repository.PurchaseLinkRepos
 
 @Controller
 public class ProductController {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ProductController.class);
 
     /** 한 페이지에 보여 줄 건수. 표 한 화면에 들어오면서 스크롤이 과하지 않은 값. */
     private static final int PAGE_SIZE = 25;
@@ -174,6 +177,10 @@ public class ProductController {
         model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         model.addAttribute("inciapiRawJson", prettyJson(product.inciapiRawData()));
         model.addAttribute("purchaseLinks", purchaseLinkRepository == null ? List.of() : purchaseLinkRepository.find(id));
+        // 카탈로그에 없는 제품에는 링크를 달 수 없다(FK). 폼을 감추고 이유를 대신 보여 준다 —
+        // 눌러 보고 나서 실패를 알게 하면 그게 곧 흰 화면이었다.
+        model.addAttribute("catalogRegistered",
+                purchaseLinkRepository != null && purchaseLinkRepository.registeredInCatalog(id));
         return "product-detail";
     }
 
@@ -182,8 +189,36 @@ public class ProductController {
                                   @RequestParam(required=false) String domain,
                                   @RequestParam(required=false) String region,
                                   RedirectAttributes redirectAttributes) {
-        if (url == null || url.isBlank()) { redirectAttributes.addFlashAttribute("errorMessage", "구매 링크를 입력하세요."); }
-        else { purchaseLinkRepository.add(id, url.trim(), domain == null || domain.isBlank() ? domainFrom(url) : domain.trim(), region); redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 추가했습니다."); }
+        if (url == null || url.isBlank()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "구매 링크를 입력하세요.");
+            return "redirect:/admin/products/" + id;
+        }
+        // 폼을 감춰도 직접 POST 는 들어올 수 있다. 여기서도 막아야 FK 위반이 500 으로 새지 않는다.
+        if (!purchaseLinkRepository.registeredInCatalog(id)) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "아직 사용자 카탈로그에 등록되지 않은 제품입니다. 분석이 끝나 카탈로그에 올라간 뒤에 링크를 추가할 수 있습니다.");
+            return "redirect:/admin/products/" + id;
+        }
+        try {
+            purchaseLinkRepository.add(id, url.trim(),
+                    domain == null || domain.isBlank() ? domainFrom(url) : domain.trim(), region);
+            redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 추가했습니다.");
+        } catch (DataAccessException e) {
+            // 🔴 삼켜서 흰 화면(Whitelabel)이 되지 않게 한다. 어드민에는 전역 예외 핸들러가 없어
+            //    여기서 잡지 않으면 어떤 DB 실패든 원인 없는 500 으로 보인다(2026-09-09 실측).
+            log.warn("구매 링크 추가 실패 productId={}", id, e);
+            redirectAttributes.addFlashAttribute("errorMessage", "구매 링크를 저장하지 못했습니다. 링크를 확인해 주세요.");
+        }
+        return "redirect:/admin/products/" + id;
+    }
+
+    /** 노출/숨김 전환. 지우지 않고 숨겨 두면 품절·일시 장애 뒤에 되살리기만 하면 된다. */
+    @PostMapping("/admin/products/{id}/purchase-links/{linkId}/active")
+    public String togglePurchaseLink(@PathVariable String id, @PathVariable long linkId,
+                                     @RequestParam boolean active, RedirectAttributes redirectAttributes) {
+        purchaseLinkRepository.setActive(id, linkId, active);
+        redirectAttributes.addFlashAttribute("successMessage",
+                active ? "구매 링크를 노출합니다." : "구매 링크를 숨겼습니다. 사용자 화면에서 보이지 않습니다.");
         return "redirect:/admin/products/" + id;
     }
 
