@@ -113,7 +113,13 @@
                     <span>등록된 구매 링크가 없습니다. 링크가 없으면 사용자 화면에 "구매하기"가 뜨지 않습니다.</span>
                 </div>
 
-                <div class="form-section">
+                <!-- 카탈로그에 없는 제품에는 FK 때문에 링크를 달 수 없다. 폼을 감추고 이유를 적는다 —
+                     눌러 보고 실패를 알게 하면 그게 곧 흰 화면이었다. -->
+                <div class="empty" th:unless="${catalogRegistered}">
+                    <span>아직 사용자 카탈로그에 등록되지 않은 제품입니다. 분석이 끝나 카탈로그에 올라간 뒤에 구매 링크를 추가할 수 있습니다.</span>
+                </div>
+
+                <div class="form-section" th:if="${catalogRegistered}">
                     <div class="form-section-title">링크 추가</div>
                     <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links'}" method="post">
                         <div class="form-grid cols-4">
