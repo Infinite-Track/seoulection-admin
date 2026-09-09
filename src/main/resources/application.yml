@@ -51,8 +51,5 @@ admin:
       model: ${GEMINI_MODEL:gemini-3.8-flash}
       api-key: ${GEMINI_API_KEY:}
 
-admin:
-  product-service-url: ${PRODUCT_SERVICE_URL:http://localhost:8185}
-
 server:
   port: ${SERVER_PORT:8081}
