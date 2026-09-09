@@ -117,7 +117,7 @@
                     <div class="form-section-title">링크 추가</div>
                     <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links'}" method="post">
                         <div class="form-grid cols-4">
-                            <div class="span-full">
+                            <div class="span-full url-field">
                                 <label for="purchaseUrl">구매 링크</label>
                                 <input id="purchaseUrl" name="url" type="url" required
                                        placeholder="https://oliveyoung.co.kr/product/..." autocomplete="off">
