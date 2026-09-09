@@ -26,6 +26,7 @@ import java.util.Map;
 import com.seoulection.admin.product.application.dto.ProductIngredientProperty;
 import java.util.ArrayList;
 import java.math.BigDecimal;
+import com.seoulection.admin.product.infrastructure.repository.PurchaseLinkRepository;
 
 @Controller
 public class ProductController {
@@ -36,12 +37,14 @@ public class ProductController {
     private final ProductService service;
     private final FunctionalScreeningService screeningService;
     private final ObjectMapper objectMapper;
+    private final PurchaseLinkRepository purchaseLinkRepository;
 
     public ProductController(ProductService service, FunctionalScreeningService screeningService,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper, PurchaseLinkRepository purchaseLinkRepository) {
         this.service = service;
         this.screeningService = screeningService;
         this.objectMapper = objectMapper;
+        this.purchaseLinkRepository = purchaseLinkRepository;
     }
 
     /**
@@ -169,8 +172,26 @@ public class ProductController {
         model.addAttribute("productIngredients", service.getProductIngredients(id));
         model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         model.addAttribute("inciapiRawJson", prettyJson(product.inciapiRawData()));
+        model.addAttribute("purchaseLinks", purchaseLinkRepository.find(id));
         return "product-detail";
     }
+
+    @PostMapping("/admin/products/{id}/purchase-links")
+    public String addPurchaseLink(@PathVariable String id, @RequestParam String url,
+                                  @RequestParam(required=false) String domain,
+                                  @RequestParam(required=false) String region,
+                                  RedirectAttributes redirectAttributes) {
+        if (url == null || url.isBlank()) { redirectAttributes.addFlashAttribute("errorMessage", "구매 링크를 입력하세요."); }
+        else { purchaseLinkRepository.add(id, url.trim(), domain == null || domain.isBlank() ? domainFrom(url) : domain.trim(), region); redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 추가했습니다."); }
+        return "redirect:/admin/products/" + id;
+    }
+
+    @PostMapping("/admin/products/{id}/purchase-links/{linkId}/delete")
+    public String deletePurchaseLink(@PathVariable String id, @PathVariable long linkId, RedirectAttributes redirectAttributes) {
+        purchaseLinkRepository.delete(id, linkId); redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 삭제했습니다."); return "redirect:/admin/products/" + id;
+    }
+
+    private String domainFrom(String value) { try { return java.net.URI.create(value).getHost(); } catch (RuntimeException e) { return ""; } }
 
     @PostMapping("/admin/products/{id}/basic")
     public String updateBasic(@PathVariable String id, @RequestParam String name,
