@@ -4,3 +4,8 @@ out/
 .idea/
 *.iml
 .DS_Store
+
+# 운영 배포용 환경변수 — 비밀값이 들어간다(POSTGRES_PASSWORD·MFDS·GEMINI). 커밋 금지.
+.env
+.env.*
+!.env.example
