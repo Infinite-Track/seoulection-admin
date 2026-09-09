@@ -128,7 +128,7 @@ public class JdbcProductIngredientAdapter implements ProductIngredientPort {
         return jdbc.query("""
                 select pi.id, pi.ingredient_id, pi.raw_name, pi.inci_order,
                        pi.concentration_min, pi.concentration_max, pi.concentration_unit,
-                       pi.notes, i.inci_name, i.display_name_ko
+                       null::text as notes, i.inci_name, i.display_name_ko
                 from product_ingredient pi
                 left join ingredient i on i.id = pi.ingredient_id
                 where pi.product_id = ? order by pi.inci_order
@@ -148,8 +148,8 @@ public class JdbcProductIngredientAdapter implements ProductIngredientPort {
         //    예전처럼 폼 값으로 덮으면, 값이 비어 온 순간 연결이 끊기고 그 행은 편집 목록에서
         //    사라져 버린다 — 방금 저장한 성분이 화면에서 없어지는 셈이다.
         int changed = jdbc.update("update product_ingredient set concentration_min=?, concentration_max=?,"
-                        + " concentration_unit=?, notes=? where id=? and product_id=?",
-                min, max, blank(unit), blank(notes), rowId, productId);
+                        + " concentration_unit=? where id=? and product_id=?",
+                min, max, blank(unit), rowId, productId);
         if (changed == 0) throw new IllegalArgumentException("제품 성분 행을 찾을 수 없습니다.");
 
         if (properties == null) return;  // 미지정 = 특성은 건드리지 않는다
