@@ -481,9 +481,14 @@ public class ProductController {
         if ("functional".equals(resolved)) {
             // 한글 이름이 이미 있으면 화면을 여는 것만으로 자동 조회가 한 번 돈다. 없으면
             // 조회할 근거가 없으니 아무것도 하지 않고 입력 칸만 보여 준다.
-            var screening = screeningService.findOrScreen(id).orElse(null);
-            model.addAttribute("screening", screening);
-            prefillFromScreening(request, product, screening);
+            try {
+                var screening = screeningService.findOrScreen(id).orElse(null);
+                model.addAttribute("screening", screening);
+                prefillFromScreening(request, product, screening);
+            } catch (RuntimeException e) {
+                // 외부 식약처 조회 실패가 검수 화면 전체를 500으로 만들지 않게 한다.
+                model.addAttribute("screeningError", e.getMessage());
+            }
         }
         return "product-workflow";
     }

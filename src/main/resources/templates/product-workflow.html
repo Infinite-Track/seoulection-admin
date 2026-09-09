@@ -21,6 +21,7 @@
         </header>
         <main class="content content-narrow">
             <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <div class="alert alert-error" th:if="${screeningError}" th:text="${screeningError}"></div>
 
             <!--
               한 화면에 한 단계만 연다. 성분 보완과 기능성 확인은 근거 자료가 다른 별개의 작업이고,
