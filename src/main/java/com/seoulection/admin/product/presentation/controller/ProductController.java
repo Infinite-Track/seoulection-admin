@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,11 +41,11 @@ public class ProductController {
     private final PurchaseLinkRepository purchaseLinkRepository;
 
     public ProductController(ProductService service, FunctionalScreeningService screeningService,
-                             ObjectMapper objectMapper, PurchaseLinkRepository purchaseLinkRepository) {
+                             ObjectMapper objectMapper, ObjectProvider<PurchaseLinkRepository> purchaseLinkRepository) {
         this.service = service;
         this.screeningService = screeningService;
         this.objectMapper = objectMapper;
-        this.purchaseLinkRepository = purchaseLinkRepository;
+        this.purchaseLinkRepository = purchaseLinkRepository.getIfAvailable();
     }
 
     /**
@@ -172,7 +173,7 @@ public class ProductController {
         model.addAttribute("productIngredients", service.getProductIngredients(id));
         model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         model.addAttribute("inciapiRawJson", prettyJson(product.inciapiRawData()));
-        model.addAttribute("purchaseLinks", purchaseLinkRepository.find(id));
+        model.addAttribute("purchaseLinks", purchaseLinkRepository == null ? List.of() : purchaseLinkRepository.find(id));
         return "product-detail";
     }
 
