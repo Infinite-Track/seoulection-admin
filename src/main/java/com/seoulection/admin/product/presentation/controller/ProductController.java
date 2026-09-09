@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,7 @@ import java.util.Map;
 import com.seoulection.admin.product.application.dto.ProductIngredientProperty;
 import java.util.ArrayList;
 import java.math.BigDecimal;
+import com.seoulection.admin.product.infrastructure.repository.PurchaseLinkRepository;
 
 @Controller
 public class ProductController {
@@ -36,12 +38,14 @@ public class ProductController {
     private final ProductService service;
     private final FunctionalScreeningService screeningService;
     private final ObjectMapper objectMapper;
+    private final PurchaseLinkRepository purchaseLinkRepository;
 
     public ProductController(ProductService service, FunctionalScreeningService screeningService,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper, ObjectProvider<PurchaseLinkRepository> purchaseLinkRepository) {
         this.service = service;
         this.screeningService = screeningService;
         this.objectMapper = objectMapper;
+        this.purchaseLinkRepository = purchaseLinkRepository.getIfAvailable();
     }
 
     /**
@@ -169,8 +173,26 @@ public class ProductController {
         model.addAttribute("productIngredients", service.getProductIngredients(id));
         model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         model.addAttribute("inciapiRawJson", prettyJson(product.inciapiRawData()));
+        model.addAttribute("purchaseLinks", purchaseLinkRepository == null ? List.of() : purchaseLinkRepository.find(id));
         return "product-detail";
     }
+
+    @PostMapping("/admin/products/{id}/purchase-links")
+    public String addPurchaseLink(@PathVariable String id, @RequestParam String url,
+                                  @RequestParam(required=false) String domain,
+                                  @RequestParam(required=false) String region,
+                                  RedirectAttributes redirectAttributes) {
+        if (url == null || url.isBlank()) { redirectAttributes.addFlashAttribute("errorMessage", "구매 링크를 입력하세요."); }
+        else { purchaseLinkRepository.add(id, url.trim(), domain == null || domain.isBlank() ? domainFrom(url) : domain.trim(), region); redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 추가했습니다."); }
+        return "redirect:/admin/products/" + id;
+    }
+
+    @PostMapping("/admin/products/{id}/purchase-links/{linkId}/delete")
+    public String deletePurchaseLink(@PathVariable String id, @PathVariable long linkId, RedirectAttributes redirectAttributes) {
+        purchaseLinkRepository.delete(id, linkId); redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 삭제했습니다."); return "redirect:/admin/products/" + id;
+    }
+
+    private String domainFrom(String value) { try { return java.net.URI.create(value).getHost(); } catch (RuntimeException e) { return ""; } }
 
     @PostMapping("/admin/products/{id}/basic")
     public String updateBasic(@PathVariable String id, @RequestParam String name,
@@ -460,9 +482,14 @@ public class ProductController {
         if ("functional".equals(resolved)) {
             // 한글 이름이 이미 있으면 화면을 여는 것만으로 자동 조회가 한 번 돈다. 없으면
             // 조회할 근거가 없으니 아무것도 하지 않고 입력 칸만 보여 준다.
-            var screening = screeningService.findOrScreen(id).orElse(null);
-            model.addAttribute("screening", screening);
-            prefillFromScreening(request, product, screening);
+            try {
+                var screening = screeningService.findOrScreen(id).orElse(null);
+                model.addAttribute("screening", screening);
+                prefillFromScreening(request, product, screening);
+            } catch (RuntimeException e) {
+                // 외부 식약처 조회 실패가 검수 화면 전체를 500으로 만들지 않게 한다.
+                model.addAttribute("screeningError", e.getMessage());
+            }
         }
         return "product-workflow";
     }

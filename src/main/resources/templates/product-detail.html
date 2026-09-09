@@ -66,6 +66,24 @@
             </section>
 
             <section class="card is-flush">
+                <div class="panel-header"><div><h2>구매 링크</h2><p class="card-subtitle">도메인별 구매 링크를 관리합니다.</p></div></div>
+                <div class="form-section" th:if="${purchaseLinks != null && !purchaseLinks.isEmpty()}">
+                    <div th:each="link : ${purchaseLinks}" class="link-row">
+                        <a th:href="${link.url}" th:text="${link.url}" target="_blank" rel="noopener"></a>
+                        <span class="data-chip is-neutral" th:text="${link.domain}"></span>
+                        <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/delete'}" method="post"><button class="btn-ghost" type="submit">삭제</button></form>
+                    </div>
+                </div>
+                <p class="empty" th:if="${purchaseLinks == null || purchaseLinks.isEmpty()}">등록된 구매 링크가 없습니다.</p>
+                <form class="form-section inline-form" th:action="@{'/admin/products/' + ${product.id} + '/purchase-links'}" method="post">
+                    <input name="url" type="url" required placeholder="https://example.com/product" aria-label="구매 링크">
+                    <input name="domain" placeholder="도메인 (예: oliveyoung)" aria-label="도메인">
+                    <input name="region" value="US" maxlength="8" placeholder="지역" aria-label="지역">
+                    <button class="btn-primary" type="submit">링크 추가</button>
+                </form>
+            </section>
+
+            <section class="card is-flush">
                 <div class="panel-header">
                     <div>
                         <h2>전성분<span class="count-inline" th:text="${product.ingredientCount()}"></span></h2>
