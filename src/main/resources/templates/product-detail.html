@@ -99,8 +99,14 @@
                                 <span class="badge badge-neutral" th:unless="${link.active}">숨김</span>
                             </td>
                             <td class="admin-actions">
+                                <!-- 지우기 전에 숨기기를 먼저 권한다. 품절·일시 장애면 되살리는 편이 낫다. -->
+                                <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/active'}" method="post">
+                                    <input type="hidden" name="active" th:value="${!link.active}">
+                                    <button class="subtle" type="submit"
+                                            th:text="${link.active} ? '숨기기' : '노출하기'">숨기기</button>
+                                </form>
                                 <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/delete'}"
-                                      method="post" onsubmit="return confirm('이 구매 링크를 삭제할까요?');">
+                                      method="post" onsubmit="return confirm('이 구매 링크를 삭제할까요? 일시적인 문제라면 숨기기를 쓰세요.');">
                                     <button class="danger" type="submit">삭제</button>
                                 </form>
                             </td>

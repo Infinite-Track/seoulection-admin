@@ -212,6 +212,16 @@ public class ProductController {
         return "redirect:/admin/products/" + id;
     }
 
+    /** 노출/숨김 전환. 지우지 않고 숨겨 두면 품절·일시 장애 뒤에 되살리기만 하면 된다. */
+    @PostMapping("/admin/products/{id}/purchase-links/{linkId}/active")
+    public String togglePurchaseLink(@PathVariable String id, @PathVariable long linkId,
+                                     @RequestParam boolean active, RedirectAttributes redirectAttributes) {
+        purchaseLinkRepository.setActive(id, linkId, active);
+        redirectAttributes.addFlashAttribute("successMessage",
+                active ? "구매 링크를 노출합니다." : "구매 링크를 숨겼습니다. 사용자 화면에서 보이지 않습니다.");
+        return "redirect:/admin/products/" + id;
+    }
+
     @PostMapping("/admin/products/{id}/purchase-links/{linkId}/delete")
     public String deletePurchaseLink(@PathVariable String id, @PathVariable long linkId, RedirectAttributes redirectAttributes) {
         purchaseLinkRepository.delete(id, linkId); redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 삭제했습니다."); return "redirect:/admin/products/" + id;

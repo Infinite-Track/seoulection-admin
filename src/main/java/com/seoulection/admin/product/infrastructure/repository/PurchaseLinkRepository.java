@@ -24,5 +24,15 @@ public class PurchaseLinkRepository {
   return count != null && count > 0;
  }
 
+ /**
+  * 노출/숨김 전환.
+  *
+  * <p>지우지 않고 숨기는 쪽을 둔 이유: 판매처가 일시 품절이거나 링크가 잠깐 죽었을 때
+  * 지웠다가 다시 넣으면 어떤 링크였는지 기록이 사라진다. 숨겨 두면 되살리기만 하면 된다.
+  */
+ public void setActive(String productId,long id,boolean active){
+  jdbc.update("update products_url set active=?, updated_at=current_timestamp where id=? and product_id=?",active,id,productId);
+ }
+
  public void delete(String productId,long id){jdbc.update("delete from products_url where id=? and product_id=?",id,productId);}
 }
