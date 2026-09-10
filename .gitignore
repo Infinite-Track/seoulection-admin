@@ -9,3 +9,7 @@ out/
 .env
 .env.*
 !.env.example
+
+# 배포 이력·락 (인스턴스에서만 생긴다)
+.deploy-history
+.deploy.lock
