@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>제품 정보 보완 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='product-enrichment')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <h1>제품 정보 보완</h1>
+                <p class="description">제품 기본 정보가 없는 제품을 조회하고 보완합니다.</p>
+            </div>
+            <div class="topbar-actions"><a class="button-secondary" href="/admin/products">제품 관리</a></div>
+        </header>
+        <main class="content enrichment-page">
+            <div class="alert alert-success" role="status" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-error" role="alert" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <section class="card is-flush">
+                <div class="panel-header enrichment-list-header">
+                    <div>
+                        <h2>정보 입력 대기<span class="count-inline" th:text="${page.totalElements}"></span></h2>
+                        <p class="card-subtitle">제품 정보 입력이 필요한 제품입니다. 저장하면 다음 처리 단계로 이동합니다.</p>
+                    </div>
+                    <form class="toolbar-search enrichment-search" method="get" th:action="@{/admin/products/enrichment}" role="search">
+                        <span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+                        <input type="search" name="q" th:value="${query}" placeholder="ASIN · 제품 ID 검색" aria-label="ASIN 또는 제품 ID 검색">
+                        <button type="submit" class="btn-ghost">검색</button>
+                        <a class="btn-ghost" th:if="${!#strings.isEmpty(query)}" href="/admin/products/enrichment">초기화</a>
+                    </form>
+                </div>
+                <div class="enrichment-empty" th:if="${page.empty}">
+                    <span class="enrichment-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+                    <strong th:text="${#strings.isEmpty(query)} ? '정보를 보완할 제품이 없습니다' : '검색 결과가 없습니다'"></strong>
+                    <p th:text="${#strings.isEmpty(query)} ? '기본 정보가 미등록인 제품이 수집되면 여기에 표시됩니다.' : 'ASIN 또는 제품 ID를 다시 확인해 주세요.'"></p>
+                    <a class="button-secondary" th:if="${!#strings.isEmpty(query)}" href="/admin/products/enrichment">전체 대기 제품 보기</a>
+                </div>
+                <div class="table-scroll" th:unless="${page.empty}">
+                    <table class="admin-table enrichment-table">
+                        <thead><tr><th>제품명</th><th>ASIN</th><th>제품 ID</th><th>상태</th><th>작업</th></tr></thead>
+                        <tbody>
+                        <tr th:each="p : ${page.content}">
+                            <td class="cell-strong">
+                                <a th:href="@{/admin/products/enrichment/{id}(id=${p.id})}"
+                                   th:text="${p.values['name'] ?: '미입력'}"></a>
+                            </td>
+                            <td th:text="${p.asin ?: '—'}"></td>
+                            <td class="enrichment-id" th:text="${p.id}"></td>
+                            <td><span class="badge badge-warning">정보 미입력</span></td>
+                            <td class="admin-actions"><a class="text-link" th:href="@{/admin/products/enrichment/{id}(id=${p.id})}">정보 입력 <span aria-hidden="true">→</span></a></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <nav class="pagination" aria-label="제품 목록 페이지">
+                    <span class="pagination-range" th:text="'전체 ' + ${page.totalElements} + '개'"></span>
+                    <div class="pagination-buttons">
+                        <a th:if="${page.hasPrevious()}" th:href="@{/admin/products/enrichment(q=${query},page=${page.number - 1})}">이전</a>
+                        <span class="is-disabled" th:unless="${page.hasPrevious()}" aria-disabled="true">이전</span>
+                        <span class="pagination-page" th:text="${page.totalPages == 0 ? 0 : page.number + 1} + ' / ' + ${page.totalPages}"></span>
+                        <a th:if="${page.hasNext()}" th:href="@{/admin/products/enrichment(q=${query},page=${page.number + 1})}">다음</a>
+                        <span class="is-disabled" th:unless="${page.hasNext()}" aria-disabled="true">다음</span>
+                    </div>
+                </nav>
+            </section>
+        </main>
+    </div>
+</div>
+</body>
+</html>

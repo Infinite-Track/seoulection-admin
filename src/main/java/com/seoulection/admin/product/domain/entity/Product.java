@@ -47,10 +47,11 @@ public class Product {
     private Product(Builder builder) {
         this.id = builder.id;
         this.asin = builder.asin;
-        this.name = requireText(builder.name, "name");
+        boolean needsInfo = builder.status == ProductStatus.NEED_PRODUCT_INFO;
+        this.name = needsInfo ? blankToNull(builder.name) : requireText(builder.name, "name");
         this.nameKo = builder.nameKo;
-        this.brand = requireText(builder.brand, "brand");
-        this.category = Objects.requireNonNull(builder.category);
+        this.brand = needsInfo ? blankToNull(builder.brand) : requireText(builder.brand, "brand");
+        this.category = needsInfo ? builder.category : Objects.requireNonNull(builder.category);
         this.description = builder.description;
         this.price = builder.price;
         this.thumbnailUrl = builder.thumbnailUrl;
@@ -115,7 +116,7 @@ public class Product {
     public String name() { return name; }
     public String nameKo() { return nameKo; }
     public String brand() { return brand; }
-    public String category() { return category.value(); }
+    public String category() { return category == null ? null : category.value(); }
     public String description() { return description; }
     public BigDecimal price() { return price; }
     public String thumbnailUrl() { return thumbnailUrl; }
@@ -247,7 +248,7 @@ public class Product {
         public Builder nameKo(String v) { this.nameKo = v; return this; }
         public Builder brand(String v) { this.brand = v; return this; }
         public Builder category(ProductCategory v) { this.category = v; return this; }
-        public Builder category(String v) { this.category = ProductCategory.from(v); return this; }
+        public Builder category(String v) { this.category = v == null || v.isBlank() ? null : ProductCategory.from(v); return this; }
         public Builder description(String v) { this.description = v; return this; }
         public Builder price(BigDecimal v) { this.price = v; return this; }
         public Builder thumbnailUrl(String v) { this.thumbnailUrl = v; return this; }

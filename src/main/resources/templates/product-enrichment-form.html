@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>제품 정보 보완 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='product-enrichment')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <nav class="breadcrumb" aria-label="현재 위치"><a href="/admin/products/enrichment">제품 정보 보완</a><span aria-hidden="true">/</span><span>정보 입력</span></nav>
+                <h1>제품 정보 입력</h1>
+            </div>
+            <div class="topbar-actions"><span class="badge badge-warning">정보 미입력</span></div>
+        </header>
+        <main class="content content-narrow enrichment-page">
+            <div class="alert alert-success" role="status" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-error" role="alert" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <section class="card is-flush">
+                <div class="panel-header">
+                    <div>
+                        <h2><span class="enrichment-asin-label">ASIN</span><span th:text="${product.asin}"></span></h2>
+                        <p class="card-subtitle enrichment-id" th:text="'제품 ID · ' + ${product.id}"></p>
+                    </div>
+                    <a href="/admin/products/enrichment" class="button-secondary">목록으로</a>
+                </div>
+                <p class="enrichment-guidance">이미 등록된 정보는 유지됩니다. 비어 있는 항목만 입력해 주세요.</p>
+                <form method="post" enctype="multipart/form-data" th:action="@{/admin/products/enrichment/{id}(id=${product.id})}" th:object="${request}" id="enrichment-form">
+                    <div class="enrichment-errors" th:if="${#fields.hasAnyErrors()}">
+                        <div class="alert alert-error" role="alert"><p th:each="err : ${#fields.allErrors()}" th:text="${err}"></p></div>
+                    </div>
+                    <div class="form-section">
+                        <div class="form-section-title">기본 정보<span class="required-mark">필수</span></div>
+                        <div class="form-grid cols-2">
+                            <div class="field">
+                                <label for="name">제품명</label>
+                                <div class="enrichment-existing" th:unless="${product.missing('name')}">
+                                    <span class="optional-mark">기존 정보 · 유지</span>
+                                    <p th:text="${product.values['name']}"></p>
+                                </div>
+                                <input type="text" id="name" th:field="*{name}" th:if="${product.missing('name')}" th:errorclass="enrichment-invalid" placeholder="예: Green Tangerine Vita C Serum" required maxlength="200">
+                            </div>
+                            <div class="field">
+                                <label for="nameKo">제품 한글명 <span class="optional-mark">선택</span></label>
+                                <div class="enrichment-existing" th:unless="${product.missing('nameKo')}">
+                                    <span class="optional-mark">기존 정보 · 유지</span>
+                                    <p th:text="${product.values['nameKo']}"></p>
+                                </div>
+                                <input type="text" id="nameKo" th:field="*{nameKo}" th:if="${product.missing('nameKo')}" th:errorclass="enrichment-invalid" placeholder="예: 청귤 비타C 잡티 케어 세럼" maxlength="200">
+                            </div>
+                            <div class="field">
+                                <label for="brand">브랜드</label>
+                                <div class="enrichment-existing" th:unless="${product.missing('brand')}">
+                                    <span class="optional-mark">기존 정보 · 유지</span>
+                                    <p th:text="${product.values['brand']}"></p>
+                                </div>
+                                <input type="text" id="brand" th:field="*{brand}" th:if="${product.missing('brand')}" th:errorclass="enrichment-invalid" placeholder="브랜드명을 입력하세요" required maxlength="100">
+                            </div>
+                            <div class="field">
+                                <label for="category">카테고리</label>
+                                <div class="enrichment-existing" th:unless="${product.missing('category')}">
+                                    <span class="optional-mark">기존 정보 · 유지</span>
+                                    <p th:text="${product.values['category']}"></p>
+                                </div>
+                                <select id="category" th:field="*{category}" th:if="${product.missing('category')}" th:errorclass="enrichment-invalid" required>
+                                    <option value="">카테고리를 선택하세요</option>
+                                    <option value="sunscreens">선케어 · Sunscreens</option>
+                                    <option value="toners">토너 · Toners</option>
+                                    <option value="treatments">트리트먼트 · Treatments</option>
+                                    <option value="moisturizers">보습 · Moisturizers</option>
+                                    <option value="cleansers">클렌저 · Cleansers</option>
+                                    <option value="face masks">마스크팩 · Face masks</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <div class="form-section-title">제품 사진<span class="required-mark">필수</span></div>
+                        <div class="enrichment-existing" th:unless="${product.missing('thumbnailUrl')}">
+                            <span class="optional-mark">기존 사진 · 유지</span>
+                            <p th:text="${product.values['thumbnailUrl']}"></p>
+                        </div>
+                        <div class="enrichment-upload" id="upload-area" th:if="${product.missing('thumbnailUrl')}">
+                            <div class="enrichment-preview">
+                                <span id="image-placeholder" class="enrichment-photo-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m3 16 5-5 5 5 3-3 5 5"/></svg></span>
+                                <img id="image-preview" alt="선택한 제품 사진 미리보기" hidden>
+                            </div>
+                            <div class="enrichment-upload-content">
+                                <label for="image">제품이 잘 보이는 사진을 선택해 주세요</label>
+                                <p class="form-help" id="image-help">JPG 또는 PNG · 최대 10MB</p>
+                                <input id="image" name="image" type="file" accept="image/jpeg,image/png" required aria-describedby="image-help image-error">
+                                <p class="form-help enrichment-file-info" id="image-info" aria-live="polite">선택한 사진은 저장 전에 미리 볼 수 있습니다.</p>
+                            </div>
+                        </div>
+                        <p id="image-error" class="error" role="alert" hidden></p>
+                    </div>
+                    <div class="form-section">
+                        <div class="form-section-title">상세 정보<span class="optional-mark">선택 입력 가능</span></div>
+                        <div class="form-grid cols-2">
+                            <div class="field span-full">
+                                <label for="description">제품 설명 <span class="optional-mark">선택</span></label>
+                                <div class="enrichment-existing" th:unless="${product.missing('description')}">
+                                    <span class="optional-mark">기존 정보 · 유지</span>
+                                    <p th:text="${product.values['description']}"></p>
+                                </div>
+                                <textarea id="description" th:field="*{description}" th:if="${product.missing('description')}" th:errorclass="enrichment-invalid" rows="5" maxlength="10000" placeholder="제품의 특징, 주요 성분, 사용 방법 등을 입력하세요."></textarea>
+                            </div>
+                            <div class="field span-full">
+                                <label for="price">가격</label>
+                                <div class="enrichment-existing" th:unless="${product.missing('price')}">
+                                    <span class="optional-mark">기존 정보 · 유지</span>
+                                    <p th:text="${product.values['price']}"></p>
+                                </div>
+                                <input id="price" type="number" th:field="*{price}" th:if="${product.missing('price')}" th:errorclass="enrichment-invalid" min="0" max="9999999999.99" step="0.01" required placeholder="예: 19.99">
+                                <p class="form-help">제품 판매 가격을 숫자로 입력하세요. 소수점 둘째 자리까지 입력할 수 있습니다.</p>
+                            </div>
+                            <div class="field span-full">
+                                <label for="productUrl">제휴링크</label>
+                                <div class="enrichment-existing" th:unless="${product.missing('productUrl')}">
+                                    <span class="optional-mark">기존 정보 · 유지</span>
+                                    <p th:text="${product.values['productUrl']}"></p>
+                                </div>
+                                <input id="productUrl" type="url" th:field="*{productUrl}" th:if="${product.missing('productUrl')}" th:errorclass="enrichment-invalid" placeholder="https://www.amazon.com/…" required maxlength="2048">
+                                <p class="form-help">이 제품을 구매할 수 있는 제휴 URL을 입력하세요.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-footer enrichment-footer">
+                        <p class="form-help">빈 정보만 저장하고 다음 처리 단계로 이동합니다.</p>
+                        <div class="enrichment-footer-actions">
+                            <a href="/admin/products/enrichment" class="button-secondary">취소</a>
+                            <button type="submit" class="btn-primary" id="save-button">제품 정보 저장</button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</div>
+<script>
+    const fileInput = document.getElementById('image');
+    const preview = document.getElementById('image-preview');
+    const placeholder = document.getElementById('image-placeholder');
+    const imageError = document.getElementById('image-error');
+    const imageInfo = document.getElementById('image-info');
+    const uploadArea = document.getElementById('upload-area');
+    let previewUrl;
+
+    fileInput?.addEventListener('change', () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        preview.hidden = true;
+        placeholder.hidden = false;
+        const file = fileInput.files[0];
+        const error = file && (file.size > 10 * 1024 * 1024 || !['image/jpeg', 'image/png'].includes(file.type))
+            ? '10MB 이하의 JPG 또는 PNG를 선택해 주세요.' : '';
+        fileInput.setCustomValidity(error);
+        fileInput.setAttribute('aria-invalid', String(Boolean(error)));
+        imageError.textContent = error;
+        imageError.hidden = !error;
+        uploadArea.classList.toggle('has-error', Boolean(error));
+        imageInfo.textContent = '선택한 사진은 저장 전에 미리 볼 수 있습니다.';
+        if (file && !error) {
+            previewUrl = URL.createObjectURL(file);
+            preview.src = previewUrl;
+            preview.hidden = false;
+            placeholder.hidden = true;
+            imageInfo.textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+        }
+    });
+    document.getElementById('enrichment-form').addEventListener('submit', () => {
+        const button = document.getElementById('save-button');
+        button.disabled = true;
+        button.textContent = '업로드 및 저장 중…';
+        document.getElementById('enrichment-form').setAttribute('aria-busy', 'true');
+    });
+</script>
+</body>
+</html>

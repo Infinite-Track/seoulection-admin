@@ -15,6 +15,9 @@ import java.util.List;
  */
 public enum ProductStage {
 
+    PRODUCT_INFO("product-info", "제품 정보 보완", "내가 할 일",
+            "제품 정보 입력이 필요한 제품입니다."),
+
     INGREDIENT_REVIEW("ingredient-review", "1 성분 보완", "내가 할 일",
             "파이프라인이 성분을 못 가져와 사람이 확인해야 하는 제품입니다."),
 
@@ -55,7 +58,7 @@ public enum ProductStage {
      */
     public String countTone() {
         return switch (this) {
-            case INGREDIENT_REVIEW, INGREDIENT_FAILED -> "is-alert";
+            case PRODUCT_INFO, INGREDIENT_REVIEW, INGREDIENT_FAILED -> "is-alert";
             case FUNCTIONAL_REVIEW -> "is-attention";
             case PIPELINE, COMPLETED -> "";
         };
