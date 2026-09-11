@@ -72,7 +72,7 @@ public class ProductEnrichmentController {
             }
             repository.save(id, request);
             flash.addFlashAttribute("successMessage", "제품 정보를 저장했습니다. 다음 제품을 선택해 주세요.");
-            return "redirect:/admin/products/enrichment";
+            return "redirect:/admin/products?stage=product-info&status=NEED_PRODUCT_INFO";
         } catch (IllegalArgumentException | DataAccessException e) {
             log.warn("Product enrichment save failed productId={}", id, e);
             model.addAttribute("errorMessage", e instanceof IllegalArgumentException ? e.getMessage() : "저장에 실패했습니다. 입력 내용을 유지했으니 잠시 후 다시 시도해 주세요.");

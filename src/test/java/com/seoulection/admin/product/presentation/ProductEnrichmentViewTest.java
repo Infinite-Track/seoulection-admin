@@ -26,12 +26,14 @@ class ProductEnrichmentViewTest {
     @Test void rendersListAndBlankForm() throws Exception {
         given(repository.find("", 0)).willReturn(new PageImpl<>(List.of(target), PageRequest.of(0,25),1));
         given(repository.get("p1")).willReturn(target);
-        mvc.perform(get("/admin/products/enrichment")).andExpect(status().isOk()).andExpect(content().string(containsString("B001")));
+        mvc.perform(get("/admin/products/enrichment")).andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products?stage=product-info&status=NEED_PRODUCT_INFO"));
         mvc.perform(get("/admin/products/enrichment/p1")).andExpect(status().isOk()).andExpect(content().string(containsString("multipart/form-data")));
     }
     @Test void rendersEmptySearch() throws Exception {
         given(repository.find("none", 0)).willReturn(Page.empty(PageRequest.of(0,25)));
-        mvc.perform(get("/admin/products/enrichment").param("q", "none")).andExpect(status().isOk());
+        mvc.perform(get("/admin/products/enrichment").param("q", "none")).andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products?stage=product-info&status=NEED_PRODUCT_INFO&q=none"));
     }
     @Test void invalidFormNeverUploads() throws Exception {
         given(repository.get("p1")).willReturn(target);
@@ -42,7 +44,8 @@ class ProductEnrichmentViewTest {
     @Test void savesOnlyReturnedS3Url() throws Exception {
         given(repository.get("p1")).willReturn(target);
         given(images.upload(any(), eq("B001"))).willReturn("https://cdn.example.com/product-pictures/photo.png");
-        mvc.perform(validRequest()).andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/admin/products/enrichment"));
+        mvc.perform(validRequest()).andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products?stage=product-info&status=NEED_PRODUCT_INFO"));
         verify(repository).save(eq("p1"), argThat(r -> r.getThumbnailUrl().equals("https://cdn.example.com/product-pictures/photo.png") && r.getNameKo() == null && r.getPrice().toPlainString().equals("19.99")));
     }
     @Test void uploadFailurePreservesTextAndDoesNotSave() throws Exception {
