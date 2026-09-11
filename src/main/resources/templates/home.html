@@ -18,6 +18,7 @@
         </header>
         <main class="content">
             <section class="menu">
+                <div class="home-section-label">콘텐츠 관리</div>
                 <a class="menu-card" th:href="@{/admin/youtubers}">
                     <span class="icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="3.5"/><path d="M10.75 9.3v5.4l4.5-2.7z" fill="currentColor" stroke="none"/></svg>
@@ -32,6 +33,7 @@
                     <h2>YouTube 영상 관리</h2>
                     <p>분석 파이프라인에서 처리할 개별 영상 링크를 등록하고 상태를 확인합니다.</p>
                 </a>
+                <div class="home-section-label">제품 데이터 관리</div>
                 <a class="menu-card" th:href="@{/admin/products}">
                     <span class="icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8 12 3.5 20.5 8 12 12.5z"/><path d="M3.5 8v9L12 21.5 20.5 17V8"/><path d="M12 12.5V21.5"/></svg>
@@ -39,12 +41,34 @@
                     <h2>제품 관리</h2>
                     <p>분석할 제품의 이름, 브랜드와 카테고리를 등록하고 처리 상태를 확인합니다.</p>
                 </a>
+                <a class="menu-card" th:href="@{/admin/ingredients}">
+                    <span class="icon">✦</span><h2>성분 관리</h2>
+                    <p>성분 사전과 제품별 성분 정보를 관리합니다.</p>
+                </a>
+                <a class="menu-card" th:href="@{/admin/ingredient-properties}">
+                    <span class="icon">⚙</span><h2>성분 특성 정의</h2>
+                    <p>성분 특성의 이름과 값 형식을 정의합니다.</p>
+                </a>
+                <div class="home-section-label">분석 데이터 관리</div>
+                <a class="menu-card" th:href="@{/admin/skin-score-policy}">
+                    <span class="icon">☷</span><h2>피부 점수 정책</h2>
+                    <p>피부 분석 점수의 기준과 정책을 관리합니다.</p>
+                </a>
                 <a class="menu-card" th:href="@{/admin/survey}">
                     <span class="icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z"/><path d="M9 12.5h6M9 16h6M9 9h2.5"/></svg>
                     </span>
                     <h2>설문 관리</h2>
                     <p>사용자 설문의 질문 문구와 선택지를 추가·수정하고 노출 여부를 관리합니다.</p>
+                </a>
+                <div class="home-section-label">알림</div>
+                <a class="menu-card" th:href="@{/admin/notifications}">
+                    <span class="icon">♧</span><h2>푸시 알림</h2>
+                    <p>사용자에게 보낼 푸시 알림을 작성하고 발송합니다.</p>
+                </a>
+                <a class="menu-card" th:href="@{/admin/notifications/devices}">
+                    <span class="icon">▣</span><h2>기기 토큰</h2>
+                    <p>푸시 알림을 받을 기기 토큰을 조회하고 관리합니다.</p>
                 </a>
             </section>
         </main>

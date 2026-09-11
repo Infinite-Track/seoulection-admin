@@ -109,6 +109,17 @@ a { color: inherit; }
 }
 
 .nav-list { display: flex; flex-direction: column; gap: 2px; }
+.nav-group-label {
+    margin: 16px 10px 5px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+.nav-group-label:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 
 .nav-item {
     display: flex;
@@ -403,13 +414,15 @@ select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0
 .ingredient-table th:nth-child(3) { width: 22%; }
 .ingredient-table th:nth-child(4) { width: auto; }
 .admin-actions .text-link { display: block; width: max-content; min-width: 84px; white-space: nowrap !important; word-break: normal !important; overflow-wrap: normal !important; }
-.product-table th:nth-child(1) { width: 19%; }
-.product-table th:nth-child(2) { width: 12%; }
-.product-table th:nth-child(3) { width: 12%; }
-.product-table th:nth-child(4) { width: 22%; }
-.product-table th:nth-child(5) { width: 6%; }
-.product-table th:nth-child(6) { width: 17%; }
-.product-table th:last-child { width: 120px; }
+.product-table { min-width: 1080px; }
+.product-table th:nth-child(1) { width: 20%; }
+.product-table th:nth-child(2) { width: 14%; }
+.product-table th:nth-child(3) { width: 14%; }
+.product-table th:nth-child(4) { width: 17%; }
+.product-table th:nth-child(5) { width: 11%; }
+.product-table th:nth-child(6) { width: 7%; }
+.product-table th:nth-child(7) { width: 15%; }
+.product-table th:last-child { width: 132px; }
 .product-table .is-functional { background: var(--accent-soft); color: var(--accent); }
 
 /* ── Toolbar: 상태 탭 + 화면 액션 ──
@@ -1203,3 +1216,55 @@ td a:hover { text-decoration: underline; }
     letter-spacing: -0.1px;
 }
 .url-field label { font-size: 13px; }
+
+/* ── 제품 정보 보완: 공용 폼·검색·표 컴포넌트를 사용하고 업로드 영역만 확장한다. ── */
+.enrichment-page .enrichment-list-header { align-items: center; flex-wrap: wrap; }
+.enrichment-search { max-width: 100%; }
+.enrichment-search input[type=search] { min-width: 0; }
+.enrichment-search .btn-ghost { display: inline-flex; align-items: center; flex-shrink: 0; text-decoration: none; }
+.enrichment-table { min-width: 600px; }
+.enrichment-table th:last-child { width: 112px; }
+.enrichment-id { color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.enrichment-asin-label { color: var(--text-tertiary); font-size: 11px; letter-spacing: .04em; }
+.enrichment-page .panel-header .button-secondary { flex-shrink: 0; }
+.enrichment-empty { display: grid; justify-items: center; gap: 10px; padding: 60px 24px; text-align: center; }
+.enrichment-empty strong { font-size: 14px; }
+.enrichment-empty p { margin: 0 0 8px; color: var(--text-secondary); font-size: 13px; }
+.enrichment-empty-icon { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 4px; border-radius: var(--radius-md); background: var(--neutral-soft); color: var(--text-tertiary); }
+.enrichment-empty-icon svg { width: 22px; height: 22px; }
+.enrichment-errors { padding: 20px 24px 0; }
+.enrichment-errors .alert { margin-bottom: 0; }
+.enrichment-errors p { margin: 3px 0; }
+.enrichment-page .enrichment-invalid { border-color: var(--danger); }
+.enrichment-upload { display: flex; align-items: center; gap: 20px; padding: 20px; border: 1px dashed var(--border-strong); border-radius: var(--radius-md); background: var(--surface-sunken); transition: border-color .12s; }
+.enrichment-upload:focus-within { border-color: var(--accent); }
+.enrichment-upload.has-error { border-color: var(--danger); }
+.enrichment-preview { display: grid; place-items: center; flex: 0 0 112px; width: 112px; height: 112px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); overflow: hidden; }
+.enrichment-preview img { width: 100%; height: 100%; object-fit: contain; }
+.enrichment-photo-icon { color: var(--text-tertiary); }
+.enrichment-photo-icon svg { display: block; width: 32px; height: 32px; }
+.enrichment-upload-content { flex: 1; min-width: 0; }
+.enrichment-upload-content label { line-height: 1.5; margin-bottom: 2px; }
+.enrichment-upload-content .form-help { margin: 4px 0 12px; }
+.enrichment-upload input[type=file] { display: block; width: 100%; min-width: 0; color: var(--text-secondary); font-family: inherit; font-size: 12px; border-radius: var(--radius-sm); }
+.enrichment-upload input[type=file]::file-selector-button { height: 34px; margin-right: 10px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-primary); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.enrichment-upload input[type=file]::file-selector-button:hover { border-color: var(--accent); color: var(--accent); }
+.enrichment-upload-content .enrichment-file-info { margin: 10px 0 0; overflow-wrap: anywhere; line-height: 1.5; }
+.enrichment-footer { justify-content: space-between; flex-wrap: wrap; }
+.enrichment-footer .form-help { margin: 0; }
+.enrichment-footer-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.home-section-label { grid-column: 1 / -1; margin: 16px 0 -2px; color: var(--text-tertiary); font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.home-section-label:first-child { margin-top: 0; }
+.enrichment-footer button:disabled { opacity: .65; cursor: wait; }
+@media (max-width: 680px) {
+    .enrichment-search { width: 100%; }
+    .enrichment-search input[type=search] { flex: 1; width: 100%; }
+    .enrichment-page .form-grid.cols-2 { grid-template-columns: 1fr; }
+    .enrichment-upload { flex-direction: column; align-items: stretch; padding: 16px; }
+    .enrichment-preview { align-self: center; }
+    .enrichment-page .pagination { gap: 8px; flex-wrap: wrap; }
+}
+
+.enrichment-guidance { margin: 0; padding: 16px 24px; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 13px; }
+.enrichment-existing { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-sunken); }
+.enrichment-existing p { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
