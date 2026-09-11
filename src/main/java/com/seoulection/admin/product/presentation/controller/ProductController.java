@@ -172,6 +172,9 @@ public class ProductController {
     @GetMapping("/admin/products/{id}")
     public String detail(@PathVariable String id, Model model) {
         var product = service.getProduct(id);
+        if (product.status() == ProductStatus.NEED_PRODUCT_INFO) {
+            return "redirect:/admin/products/enrichment/" + id;
+        }
         model.addAttribute("product", product);
         model.addAttribute("productIngredients", service.getProductIngredients(id));
         model.addAttribute("propertyDefinitions", service.propertyDefinitions());
@@ -484,6 +487,9 @@ public class ProductController {
                              @RequestParam(required = false) String step,
                              Model model) {
         var product = service.getProduct(id);
+        if (product.status() == ProductStatus.NEED_PRODUCT_INFO) {
+            return "redirect:/admin/products/enrichment/" + id;
+        }
         ProductRegisterRequest request = new ProductRegisterRequest();
         request.setName(product.name());
         request.setBrand(product.brand());

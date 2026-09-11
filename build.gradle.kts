@@ -18,6 +18,8 @@ repositories {
 }
 
 dependencies {
+    implementation("software.amazon.awssdk:s3:2.54.15")
+    implementation("software.amazon.awssdk:sts:2.54.15")
     // 기능성 스크리닝의 이름 해석(브랜드 한글 표기·등록명 후보·동일 제품 판정)은 Gemini를 쓴다.
     // SDK 의존성 없이 RestClient로 REST를 직접 부른다 — 이 프로젝트의 다른 외부 연동
     // (MFDS, V2 product-service, 알림)과 같은 방식이고, 새 의존성이 필요 없다.

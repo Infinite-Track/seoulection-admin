@@ -91,11 +91,12 @@
                 <div class="table-scroll" th:if="${!page.isEmpty()}">
                     <table class="admin-table product-table">
                         <thead>
-                        <tr><th>제품명</th><th>브랜드</th><th>카테고리</th><th>기능성</th><th class="is-numeric">성분</th><th>상태</th><th>검수</th></tr>
+                        <tr><th>제품명</th><th>ASIN</th><th>브랜드</th><th>카테고리</th><th>기능성</th><th class="is-numeric">성분</th><th>상태</th><th>검수</th></tr>
                         </thead>
                         <tbody>
                         <tr th:each="product : ${page.content()}">
-                            <td class="cell-strong"><a th:href="@{'/admin/products/' + ${product.id}}" th:text="${product.name}"></a></td>
+                            <td class="cell-strong"><a th:href="@{'/admin/products/' + ${product.id}}" th:text="${product.name ?: '미입력'}"></a></td>
+                            <td class="enrichment-id" th:text="${product.asin ?: '—'}"></td>
                             <td th:text="${product.brand}"></td>
                             <td><span class="data-chip is-neutral" th:text="${product.category}"></span></td>
                             <td>

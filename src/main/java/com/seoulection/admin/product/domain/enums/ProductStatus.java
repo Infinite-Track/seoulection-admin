@@ -11,24 +11,28 @@ package com.seoulection.admin.product.domain.enums;
  * </ul>
  */
 public enum ProductStatus {
+    NEED_PRODUCT_INFO,
     PENDING,
     NEED_MANUAL_REVIEW,
     NOT_FOUND,
     INSUFFICIENT_INGREDIENTS,
     INGREDIENTS_ADDED,
     READY_FOR_INCIAPI,
+    READY_FOR_KEYWORD_ANALYSIS,
     READY_FOR_ANALYSIS,
     COMPLETE,
     SUMMARIZED;
 
     public String displayName() {
         return switch (this) {
+            case NEED_PRODUCT_INFO -> "제품 정보 입력 필요";
             case PENDING -> "대기 중";
             case NEED_MANUAL_REVIEW -> "성분 수동 확인 필요";
             case NOT_FOUND -> "성분 정보 없음";
             case INSUFFICIENT_INGREDIENTS -> "성분 부족";
             case INGREDIENTS_ADDED -> "성분 입력 완료";
             case READY_FOR_INCIAPI -> "INCI API 준비";
+            case READY_FOR_KEYWORD_ANALYSIS -> "키워드 분석 준비";
             case READY_FOR_ANALYSIS -> "분석 준비";
             case COMPLETE -> "분석 완료";
             case SUMMARIZED -> "요약 완료";
@@ -42,9 +46,9 @@ public enum ProductStatus {
     public String tone() {
         return switch (this) {
             case PENDING -> "neutral";
-            case NEED_MANUAL_REVIEW, INSUFFICIENT_INGREDIENTS -> "warning";
+            case NEED_PRODUCT_INFO, NEED_MANUAL_REVIEW, INSUFFICIENT_INGREDIENTS -> "warning";
             case NOT_FOUND -> "danger";
-            case INGREDIENTS_ADDED, READY_FOR_INCIAPI, READY_FOR_ANALYSIS -> "accent";
+            case INGREDIENTS_ADDED, READY_FOR_INCIAPI, READY_FOR_KEYWORD_ANALYSIS, READY_FOR_ANALYSIS -> "accent";
             case COMPLETE, SUMMARIZED -> "success";
         };
     }
@@ -58,9 +62,10 @@ public enum ProductStatus {
      */
     public ProductStage stage() {
         return switch (this) {
+            case NEED_PRODUCT_INFO -> ProductStage.PRODUCT_INFO;
             case NEED_MANUAL_REVIEW -> ProductStage.INGREDIENT_REVIEW;
             case INGREDIENTS_ADDED -> ProductStage.FUNCTIONAL_REVIEW;
-            case PENDING, READY_FOR_INCIAPI, READY_FOR_ANALYSIS -> ProductStage.PIPELINE;
+            case PENDING, READY_FOR_INCIAPI, READY_FOR_KEYWORD_ANALYSIS, READY_FOR_ANALYSIS -> ProductStage.PIPELINE;
             case COMPLETE, SUMMARIZED -> ProductStage.COMPLETED;
             // 성분을 확보하지 못한 두 결말. 다시 시도해 볼 대상이라 한곳에 모아 둔다.
             case INSUFFICIENT_INGREDIENTS, NOT_FOUND -> ProductStage.INGREDIENT_FAILED;
@@ -80,12 +85,13 @@ public enum ProductStatus {
         return switch (this) {
             case NEED_MANUAL_REVIEW, INSUFFICIENT_INGREDIENTS, NOT_FOUND -> "ingredients";
             case INGREDIENTS_ADDED -> "functional";
-            case PENDING, READY_FOR_INCIAPI, READY_FOR_ANALYSIS, COMPLETE, SUMMARIZED -> null;
+            case NEED_PRODUCT_INFO, PENDING, READY_FOR_INCIAPI, READY_FOR_KEYWORD_ANALYSIS, READY_FOR_ANALYSIS, COMPLETE, SUMMARIZED -> null;
         };
     }
 
     /** 목록의 "검수" 열 링크 문구. */
     public String actionLabel() {
+        if (this == NEED_PRODUCT_INFO) return "제품 정보 입력";
         String step = workflowStep();
         if (step == null) {
             return "상세 보기";
@@ -96,7 +102,7 @@ public enum ProductStatus {
     /** 기능성 검수를 이미 지났는가. 별도 필드 대신 이 판정이 functional_review_status를 대신한다. */
     public boolean functionalReviewDone() {
         return switch (this) {
-            case READY_FOR_INCIAPI, READY_FOR_ANALYSIS, COMPLETE, SUMMARIZED -> true;
+            case READY_FOR_INCIAPI, READY_FOR_KEYWORD_ANALYSIS, READY_FOR_ANALYSIS, COMPLETE, SUMMARIZED -> true;
             default -> false;
         };
     }
