@@ -8,9 +8,10 @@
 #
 # 사용법:
 #   ./deploy/deploy.sh sha-7c29165     # 이 태그로 배포
+#   ./deploy/deploy.sh latest          # main 최신 이미지로 배포 (sha-<커밋7자리> 로 풀어서 기록)
 #   ./deploy/deploy.sh                 # 태그 없이 = 현재 .env 값으로 재기동만
 #
-# 하는 일: 이전 태그 기록 → 태그 교체 → pull → up -d --wait → 실패하면 이전 태그로 롤백
+# 하는 일: (latest 해석) → 이전 태그 기록 → 태그 교체 → pull → up -d --wait → 실패하면 이전 태그로 롤백
 #
 set -euo pipefail
 
@@ -42,6 +43,31 @@ PREV_TAG=$(grep -E '^ADMIN_IMAGE_TAG=' "$ENV_FILE" | cut -d= -f2-)
 [ -n "$PREV_TAG" ] || fail "$ENV_FILE 에서 ADMIN_IMAGE_TAG 를 찾지 못했다."
 
 TAG="${1:-$PREV_TAG}"
+
+# ── latest 는 받자마자 sha-<커밋7자리> 로 바꿔 쓴다. 🔴 .env 에 latest 를 적지 않는다 —
+#    그 이름의 뜻이 계속 바뀌어 이력이 롤백 근거가 되지 못한다(compose 의 :? 주석 참조).
+#    CI 의 metadata-action 이 이미지에 커밋 SHA 라벨을 붙이므로 그걸 읽는다. EC2 에는 git 도 gh 도 없다.
+if [ "$TAG" = "latest" ]; then
+  # 이미지 이름은 compose 에서 읽는다. 여기 따로 적으면 두 곳이 어긋날 수 있다.
+  IMAGE_REPO=$(grep -oE 'ghcr\.io/[a-z0-9._/-]+' "$COMPOSE_FILE" | head -1)
+  [ -n "$IMAGE_REPO" ] || fail "$COMPOSE_FILE 에서 이미지 이름을 찾지 못했다."
+
+  log "latest 가 가리키는 커밋 확인"
+  docker pull -q "${IMAGE_REPO}:latest" >/dev/null \
+    || fail "${IMAGE_REPO}:latest pull 실패 — GHCR 로그인 상태를 확인할 것."
+  REVISION=$(docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "${IMAGE_REPO}:latest")
+  # 라벨이 없으면 docker 버전에 따라 빈 값이나 "<no value>" 가 나온다. 형식으로 거른다.
+  [[ "$REVISION" =~ ^[0-9a-f]{40}$ ]] || fail "latest 이미지에서 커밋 SHA 라벨을 읽지 못했다(값: ${REVISION})."
+  TAG="sha-${REVISION:0:7}"
+
+  # ⚠️ 이름을 조립했을 뿐이다. 그 태그가 실제로 같은 이미지인지 확인한다 —
+  #    CI 의 짧은 SHA 길이가 바뀌면 존재하지 않는 태그나 엉뚱한 이미지를 부르게 된다.
+  docker pull -q "${IMAGE_REPO}:${TAG}" >/dev/null \
+    || fail "${TAG} 가 GHCR 에 없다. CI 의 SHA 태그 형식이 바뀌었는지 확인할 것."
+  [ "$(docker image inspect -f '{{.Id}}' "${IMAGE_REPO}:latest")" = "$(docker image inspect -f '{{.Id}}' "${IMAGE_REPO}:${TAG}")" ] \
+    || fail "latest 와 ${TAG} 가 서로 다른 이미지다. 중단한다."
+  log "latest = $TAG"
+fi
 
 if [ "$TAG" = "$PREV_TAG" ]; then
   log "태그 변화 없음($TAG) — 재기동만 한다"
