@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>트렌딩 기준 | MySeoulection Admin</title><link rel="stylesheet" th:href="@{/css/admin.css}"></head>
+<body><div class="shell">
+<aside th:replace="~{fragments/sidebar :: nav(active='trending')}"></aside>
+<div class="shell-main"><header class="topbar"><div><h1>트렌딩 기준</h1><p class="description">최근 언급·누적 언급·올리브영 순위를 조합해 사용자 홈의 Trending in Korea 순위를 만듭니다.</p></div></header>
+<main class="content">
+<div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+<section class="card"><div class="panel-header"><div><h2>점수 정책</h2><p class="card-subtitle">95퍼센타일을 기준으로 언급 수를 0~1로 정규화합니다.</p></div></div>
+<form class="form-section" method="post" th:object="${settings}"><div class="form-grid cols-2">
+<div class="field"><label for="recentDays">최근 언급 기간</label><select id="recentDays" th:field="*{recentDays}"><option value="7">7일</option><option value="14">14일</option><option value="30">30일</option></select></div>
+<div class="field"><label for="maxProducts">최대 노출 제품 수</label><input id="maxProducts" type="number" min="1" max="100" th:field="*{maxProducts}"></div>
+<div class="field"><label for="recentWeight">최근 언급 수 가중치 (%)</label><input id="recentWeight" type="number" min="0" max="100" th:field="*{recentWeight}"></div>
+<div class="field"><label for="totalWeight">전체 언급 수 가중치 (%)</label><input id="totalWeight" type="number" min="0" max="100" th:field="*{totalWeight}"></div>
+<div class="field"><label for="oliveyoungWeight">올리브영 순위 가중치 (%)</label><input id="oliveyoungWeight" type="number" min="0" max="100" th:field="*{oliveyoungWeight}"></div>
+</div><h3>올리브영 순위 점수</h3><div class="form-grid cols-2"><div class="field"><label>1~3위</label><input type="number" step="0.01" min="0" max="1" th:field="*{top3Score}"></div><div class="field"><label>4~10위</label><input type="number" step="0.01" min="0" max="1" th:field="*{top10Score}"></div><div class="field"><label>11~30위</label><input type="number" step="0.01" min="0" max="1" th:field="*{top30Score}"></div><div class="field"><label>31~100위</label><input type="number" step="0.01" min="0" max="1" th:field="*{top100Score}"></div></div><p class="form-help">가중치 합계는 100%여야 합니다. 순위 구간 점수도 정책 JSON에 저장되므로 코드 변경 없이 조정할 수 있습니다.</p>
+<div class="form-actions"><button class="button-secondary" type="submit" formaction="/admin/trending/preview">미리보기</button><button class="button-primary" type="submit" formaction="/admin/trending/apply">적용하기</button></div></form></section>
+
+<section class="card trending-signal-card"><div class="panel-header"><div><h2>올리브영 순위</h2><p class="card-subtitle">제품명·브랜드·ASIN으로 제품을 찾은 뒤 기준일의 순위를 저장합니다.</p></div></div>
+<div class="form-section trending-product-picker">
+<form class="search-form trending-product-search" method="get" action="/admin/trending">
+<div class="field"><label for="productQuery">제품 검색</label><div class="search-input-wrap"><span class="search-icon" aria-hidden="true">⌕</span><input id="productQuery" name="productQuery" type="search" th:value="${productQuery}" placeholder="제품명, 브랜드 또는 ASIN을 입력하세요" required><button class="button-secondary" type="submit">검색</button></div></div>
+</form>
+<form method="post" action="/admin/trending/oliveyoung" th:if="${!productResults.isEmpty()}">
+<fieldset class="product-result-fieldset"><legend>검색 결과 <span th:text="${productResults.size()}"></span>개</legend><div class="product-result-list">
+<label class="product-result" th:each="product:${productResults}"><input type="radio" name="productId" th:value="${product.id}" required><span class="product-result-body"><strong th:text="${product.name}"></strong><span class="product-result-meta"><span th:text="${#strings.isEmpty(product.brand)?'브랜드 미입력':product.brand}"></span><code th:text="${#strings.isEmpty(product.asin)?'ASIN 미입력':product.asin}"></code></span></span><span class="product-result-check">선택</span></label>
+</div></fieldset>
+<div class="form-grid cols-2 trending-rank-fields"><div class="field"><label for="oliveyoungRank">올리브영 순위</label><input id="oliveyoungRank" name="rank" type="number" min="1" max="100" placeholder="1~100" required></div><div class="field"><label for="measuredAt">기준일</label><input id="measuredAt" name="measuredAt" type="date" th:value="${today}" required></div></div><div class="form-actions"><button class="button-primary" type="submit">선택한 제품의 순위 저장</button></div></form>
+<div class="empty-inline trending-search-empty" th:if="${!#strings.isEmpty(productQuery) and productResults.isEmpty()}">검색 조건에 맞는 제품이 없습니다.</div>
+</div>
+<div class="table-scroll" th:if="${!signals.isEmpty()}"><table class="admin-table"><thead><tr><th>제품명</th><th>브랜드</th><th>ASIN</th><th>순위</th><th>기준일</th></tr></thead><tbody><tr th:each="s:${signals}"><td th:text="${s.name}"></td><td th:text="${s.brand==null?'—':s.brand}"></td><td><code th:text="${s.asin==null?'—':s.asin}"></code></td><td th:text="${s.rank}+'위'"></td><td th:text="${s.measured_at}"></td></tr></tbody></table></div></section>
+
+<section class="card" th:if="${results != null}"><div class="panel-header"><div><h2>결과 미리보기</h2><p class="card-subtitle">적용 전 예상 순위입니다.</p></div></div><div class="table-scroll"><table class="admin-table"><thead><tr><th>순위</th><th>제품</th><th>최근 언급</th><th>전체 언급</th><th>올리브영</th><th>총점</th></tr></thead><tbody><tr th:each="r:${results}"><td th:text="${r.rank}"></td><td th:text="${r.name}"></td><td th:text="${r.recentMentions}"></td><td th:text="${r.totalMentions}"></td><td th:text="${r.oliveyoungRank==null?'—':r.oliveyoungRank+'위'}"></td><td th:text="${#numbers.formatDecimal(r.score,1,3)}"></td></tr></tbody></table></div></section>
+</main></div></div></body></html>

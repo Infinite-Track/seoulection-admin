@@ -1268,3 +1268,31 @@ td a:hover { text-decoration: underline; }
 .enrichment-guidance { margin: 0; padding: 16px 24px; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 13px; }
 .enrichment-existing { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-sunken); }
 .enrichment-existing p { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
+
+/* 트렌딩 외부 지표: 제품 ID를 외우지 않고 검색 결과에서 고른다. */
+.trending-product-picker { display: grid; gap: 22px; }
+.trending-product-search { max-width: 720px; }
+.trending-product-search .field { width: 100%; }
+.search-input-wrap { display: flex; align-items: center; gap: 8px; position: relative; }
+.search-input-wrap input { flex: 1; min-width: 0; padding-left: 38px; }
+.search-input-wrap .search-icon { position: absolute; left: 14px; color: var(--text-tertiary); font-size: 19px; pointer-events: none; }
+.product-result-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.product-result-fieldset legend { margin-bottom: 10px; color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.product-result-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 330px; overflow-y: auto; }
+.product-result { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); cursor: pointer; transition: border-color .12s, background .12s, box-shadow .12s; }
+.product-result:hover { border-color: var(--border-strong); background: var(--surface-sunken); }
+.product-result:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.product-result input { flex: 0 0 auto; accent-color: var(--accent); }
+.product-result-body { display: block; flex: 1; min-width: 0; }
+.product-result-body strong { display: block; overflow: hidden; color: var(--text-primary); font-size: 13.5px; text-overflow: ellipsis; white-space: nowrap; }
+.product-result-meta { display: flex; gap: 8px; margin-top: 5px; color: var(--text-tertiary); font-size: 11.5px; }
+.product-result-meta span, .product-result-meta code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.product-result-check { color: var(--text-tertiary); font-size: 11px; font-weight: 700; }
+.product-result:has(input:checked) .product-result-check { color: var(--accent); }
+.trending-rank-fields { max-width: 720px; }
+.trending-search-empty { padding: 18px; border: 1px dashed var(--border); border-radius: var(--radius-md); text-align: center; }
+@media (max-width: 720px) {
+    .product-result-list { grid-template-columns: 1fr; }
+    .search-input-wrap { align-items: stretch; flex-direction: column; }
+    .search-input-wrap .search-icon { top: 11px; }
+}
