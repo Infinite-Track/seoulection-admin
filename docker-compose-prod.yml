@@ -44,6 +44,21 @@ services:
       FUNCTIONAL_SCREENING_LLM: "${FUNCTIONAL_SCREENING_LLM:-false}"
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
 
+      # 제품 사진 업로드(제품 정보 보완). 비어 있어도 기동은 되고, 업로드 시점에 에러가 난다.
+      # ⚠️ .env 에 적기만 해서는 컨테이너에 안 들어간다 — compose 는 여기 나열한 것만 넘긴다.
+      #    .env 는 이 파일의 ${...} 보간에만 쓰인다.
+      # 원본 자격증명은 AWS SDK 가 환경변수에서 직접 읽고, 그걸로 AWS_ROLE_ARN 을 AssumeRole 한다.
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
+      # 🔴 아래 둘은 기본값을 비우지 말 것. 빈 문자열을 넘기면 앱의 기본값이 아니라 빈 값이 쓰인다
+      #    (S3_PREFIX 는 버킷 루트에 올라가고, AWS_ROLE_ARN 은 AssumeRole 이 실패한다).
+      #    기본값은 ProductImageStorage 의 @Value 기본값과 맞춘다.
+      S3_PREFIX: ${S3_PREFIX:-product-pictures}
+      AWS_ROLE_ARN: ${AWS_ROLE_ARN:-arn:aws:iam::091974775936:role/seoulection-product-image-s3-role}
+
       # 🔴 힙 상한을 명시한다. Dockerfile 의 ENTRYPOINT 에 -Xmx 가 없어서, 없으면 JVM 이
       #    컨테이너 메모리의 약 1/4 을 최대 힙으로 잡는다. t3.micro(1GB) 에서는 여유가 없다.
       JAVA_TOOL_OPTIONS: "-Xmx320m"
