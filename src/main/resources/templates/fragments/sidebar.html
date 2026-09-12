@@ -65,6 +65,9 @@
             </span>
             <span>피부 점수 정책</span>
         </a>
+        <a class="nav-item" th:classappend="${active == 'trending'} ? 'is-active' : ''" th:href="@{/admin/trending}">
+            <span class="nav-icon"><span style="font-size:16px">↗</span></span><span>트렌딩 기준</span>
+        </a>
         <div class="nav-group-label">알림</div>
         <a class="nav-item" th:classappend="${active == 'notifications'} ? 'is-active' : ''" th:href="@{/admin/notifications}">
             <span class="nav-icon">
