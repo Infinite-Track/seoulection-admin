@@ -26,7 +26,7 @@ public enum ProductCategory {
         }
 
         return Arrays.stream(values())
-                .filter(category -> category.value.equals(value.trim()))
+                .filter(category -> category.value.equalsIgnoreCase(value.trim()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 category입니다: " + value));
     }
