@@ -23,6 +23,7 @@
         </header>
         <main class="content">
             <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
 
             <section class="card is-flush">
                 <div class="panel-header">
@@ -71,7 +72,8 @@
                         <h2>구매 링크<span class="count-inline"
                                        th:if="${purchaseLinks != null && !purchaseLinks.isEmpty()}"
                                        th:text="${purchaseLinks.size()}">0</span></h2>
-                        <p class="card-subtitle">사용자 화면의 "구매하기"가 여기로 나갑니다. 도메인·지역별로 하나씩 둡니다.</p>
+                        <p class="card-subtitle">노출 중인 링크는 위에서부터 사용자 화면에 최대 3개만 표시됩니다. 숨긴 링크는 보관만 됩니다.</p>
+                        <p class="card-subtitle" id="purchase-link-limit" th:if="${activePurchaseLinkCount >= 3}">현재 3개가 노출 중입니다. 다른 링크를 노출하려면 기존 링크 하나를 먼저 숨겨 주세요.</p>
                     </div>
                 </div>
 
@@ -80,10 +82,11 @@
                 <div class="table-scroll" th:if="${purchaseLinks != null && !purchaseLinks.isEmpty()}">
                     <table class="admin-table">
                         <thead>
-                        <tr><th>도메인</th><th>지역</th><th>링크</th><th>상태</th><th>관리</th></tr>
+                        <tr><th>순서</th><th>도메인</th><th>지역</th><th>링크</th><th>상태</th><th>관리</th></tr>
                         </thead>
                         <tbody>
                         <tr th:each="link : ${purchaseLinks}" th:classappend="${link.active} ? '' : 'is-inactive'">
+                            <td><strong th:if="${link.active}" th:text="${link.displayOrder}">1</strong><span class="pending" th:unless="${link.active}">—</span></td>
                             <td>
                                 <span class="data-chip is-neutral" th:if="${link.domain != null}" th:text="${link.domain}">oliveyoung</span>
                                 <span class="pending" th:if="${link.domain == null}">미지정</span>
@@ -99,10 +102,14 @@
                                 <span class="badge badge-neutral" th:unless="${link.active}">숨김</span>
                             </td>
                             <td class="admin-actions">
+                                <form th:if="${link.active}" th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/move'}" method="post"><input type="hidden" name="direction" value="-1"><button class="subtle" type="submit" aria-label="위로 이동">↑</button></form>
+                                <form th:if="${link.active}" th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/move'}" method="post"><input type="hidden" name="direction" value="1"><button class="subtle" type="submit" aria-label="아래로 이동">↓</button></form>
                                 <!-- 지우기 전에 숨기기를 먼저 권한다. 품절·일시 장애면 되살리는 편이 낫다. -->
                                 <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/active'}" method="post">
                                     <input type="hidden" name="active" th:value="${!link.active}">
                                     <button class="subtle" type="submit"
+                                            th:disabled="${!link.active and activePurchaseLinkCount >= 3}"
+                                            aria-describedby="purchase-link-limit"
                                             th:text="${link.active} ? '숨기기' : '노출하기'">숨기기</button>
                                 </form>
                                 <form th:action="@{'/admin/products/' + ${product.id} + '/purchase-links/' + ${link.id} + '/delete'}"

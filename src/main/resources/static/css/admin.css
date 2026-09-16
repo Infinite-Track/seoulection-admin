@@ -364,6 +364,7 @@ select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0
     font-weight: 700;
 }
 .button-primary:disabled { background: #b9bddf; cursor: not-allowed; }
+.admin-actions button:disabled { opacity: .45; cursor: not-allowed; }
 .notification-preview {
     display: flex;
     align-items: center;
