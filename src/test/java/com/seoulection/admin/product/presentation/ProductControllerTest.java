@@ -47,11 +47,43 @@ class ProductControllerTest {
 
     @Test
     void fourthVisibleLinkRedirectsWithGuidance() throws Exception {
-        given(purchaseLinkRepository.setActive("13", 99L, true)).willReturn(false);
+        stubPurchaseCatalog();
+        given(purchaseLinkRepository.setActive("pg-42", 99L, true)).willReturn(false);
         mockMvc.perform(post("/admin/products/13/purchase-links/99/active").param("active", "true"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/products/13"))
                 .andExpect(flash().attribute("errorMessage", "구매 링크는 최대 3개까지 노출할 수 있습니다. 기존 링크 하나를 숨긴 후 다시 노출해 주세요."));
+    }
+
+    private void stubPurchaseCatalog() {
+        given(service.getProduct("13")).willReturn(new ProductResult(
+                "13", "B010FOFSH0", "Serum", null, "Brand", "treatments", null,
+                null, null, null, 0, BigDecimal.ZERO, null, null,
+                null, null, null, List.of(), ProductStatus.COMPLETE));
+        given(purchaseLinkRepository.catalogIdByAsin("B010FOFSH0"))
+                .willReturn(java.util.Optional.of("pg-42"));
+    }
+
+    @Test
+    void purchaseLinksUseAsinMappedCatalogId() throws Exception {
+        stubPurchaseCatalog();
+        mockMvc.perform(get("/admin/products/13"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("catalogRegistered", true));
+        then(purchaseLinkRepository).should().find("pg-42");
+
+        mockMvc.perform(post("/admin/products/13/purchase-links")
+                .param("url", "https://www.amazon.com/dp/B010FOFSH0"))
+                .andExpect(status().is3xxRedirection());
+        then(purchaseLinkRepository).should().add(eq("pg-42"), any(), any(), any());
+
+        mockMvc.perform(post("/admin/products/13/purchase-links/99/move").param("direction", "1"))
+                .andExpect(status().is3xxRedirection());
+        then(purchaseLinkRepository).should().move("pg-42", 99L, 1);
+
+        mockMvc.perform(post("/admin/products/13/purchase-links/99/delete"))
+                .andExpect(status().is3xxRedirection());
+        then(purchaseLinkRepository).should().delete("pg-42", 99L);
     }
 
     /** 컨트롤러가 자동 조회를 부르지만 이 테스트가 보는 건 검수 폼의 규칙이다 — 대역으로 둔다. */

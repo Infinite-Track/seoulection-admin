@@ -179,13 +179,14 @@ public class ProductController {
         model.addAttribute("productIngredients", service.getProductIngredients(id));
         model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         model.addAttribute("inciapiRawJson", prettyJson(product.inciapiRawData()));
-        var purchaseLinks = purchaseLinkRepository == null ? List.<com.seoulection.admin.product.application.dto.PurchaseLinkResult>of() : purchaseLinkRepository.find(id);
+        var catalogId = purchaseLinkRepository == null ? java.util.Optional.<String>empty() : purchaseLinkRepository.catalogIdByAsin(product.asin());
+        var purchaseLinks = catalogId.isEmpty() ? List.<com.seoulection.admin.product.application.dto.PurchaseLinkResult>of() : purchaseLinkRepository.find(catalogId.get());
         model.addAttribute("purchaseLinks", purchaseLinks);
         model.addAttribute("activePurchaseLinkCount", purchaseLinks.stream().filter(link -> link.active()).count());
         // 카탈로그에 없는 제품에는 링크를 달 수 없다(FK). 폼을 감추고 이유를 대신 보여 준다 —
         // 눌러 보고 나서 실패를 알게 하면 그게 곧 흰 화면이었다.
         model.addAttribute("catalogRegistered",
-                purchaseLinkRepository != null && purchaseLinkRepository.registeredInCatalog(id));
+                catalogId.isPresent());
         return "product-detail";
     }
 
@@ -199,13 +200,14 @@ public class ProductController {
             return "redirect:/admin/products/" + id;
         }
         // 폼을 감춰도 직접 POST 는 들어올 수 있다. 여기서도 막아야 FK 위반이 500 으로 새지 않는다.
-        if (!purchaseLinkRepository.registeredInCatalog(id)) {
+        var catalogId = purchaseLinkRepository.catalogIdByAsin(service.getProduct(id).asin());
+        if (catalogId.isEmpty()) {
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "아직 사용자 카탈로그에 등록되지 않은 제품입니다. 분석이 끝나 카탈로그에 올라간 뒤에 링크를 추가할 수 있습니다.");
+                    "ASIN으로 사용자 카탈로그 제품을 확인할 수 없습니다. ASIN과 카탈로그 등록 상태를 확인해 주세요.");
             return "redirect:/admin/products/" + id;
         }
         try {
-            boolean visible = purchaseLinkRepository.add(id, url.trim(),
+            boolean visible = purchaseLinkRepository.add(catalogId.get(), url.trim(),
                     domain == null || domain.isBlank() ? domainFrom(url) : domain.trim(), region);
             redirectAttributes.addFlashAttribute("successMessage", visible
                     ? "구매 링크를 추가하고 사용자 화면에 노출했습니다."
@@ -224,7 +226,9 @@ public class ProductController {
     public String togglePurchaseLink(@PathVariable String id, @PathVariable long linkId,
                                      @RequestParam boolean active, RedirectAttributes redirectAttributes) {
         try {
-            if (!purchaseLinkRepository.setActive(id, linkId, active)) {
+            var catalogId = purchaseCatalogId(id, redirectAttributes);
+            if (catalogId.isEmpty()) return "redirect:/admin/products/" + id;
+            if (!purchaseLinkRepository.setActive(catalogId.get(), linkId, active)) {
                 redirectAttributes.addFlashAttribute("errorMessage", "구매 링크는 최대 3개까지 노출할 수 있습니다. 기존 링크 하나를 숨긴 후 다시 노출해 주세요.");
                 return "redirect:/admin/products/" + id;
             }
@@ -239,14 +243,24 @@ public class ProductController {
     @PostMapping("/admin/products/{id}/purchase-links/{linkId}/move")
     public String movePurchaseLink(@PathVariable String id, @PathVariable long linkId,
                                    @RequestParam int direction, RedirectAttributes redirectAttributes) {
-        purchaseLinkRepository.move(id, linkId, direction < 0 ? -1 : 1);
+        var catalogId = purchaseCatalogId(id, redirectAttributes);
+        if (catalogId.isEmpty()) return "redirect:/admin/products/" + id;
+        purchaseLinkRepository.move(catalogId.get(), linkId, direction < 0 ? -1 : 1);
         redirectAttributes.addFlashAttribute("successMessage", "사용자 화면의 판매처 순서를 변경했습니다.");
         return "redirect:/admin/products/" + id;
     }
 
     @PostMapping("/admin/products/{id}/purchase-links/{linkId}/delete")
     public String deletePurchaseLink(@PathVariable String id, @PathVariable long linkId, RedirectAttributes redirectAttributes) {
-        purchaseLinkRepository.delete(id, linkId); redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 삭제했습니다."); return "redirect:/admin/products/" + id;
+        var catalogId = purchaseCatalogId(id, redirectAttributes);
+        if (catalogId.isEmpty()) return "redirect:/admin/products/" + id;
+        purchaseLinkRepository.delete(catalogId.get(), linkId); redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 삭제했습니다."); return "redirect:/admin/products/" + id;
+    }
+
+    private java.util.Optional<String> purchaseCatalogId(String mongoId, RedirectAttributes redirectAttributes) {
+        var catalogId = purchaseLinkRepository.catalogIdByAsin(service.getProduct(mongoId).asin());
+        if (catalogId.isEmpty()) redirectAttributes.addFlashAttribute("errorMessage", "ASIN으로 사용자 카탈로그 제품을 확인할 수 없습니다. ASIN과 카탈로그 등록 상태를 확인해 주세요.");
+        return catalogId;
     }
 
     private String domainFrom(String value) { try { return java.net.URI.create(value).getHost(); } catch (RuntimeException e) { return ""; } }
