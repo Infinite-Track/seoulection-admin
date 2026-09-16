@@ -42,6 +42,18 @@ class ProductControllerTest {
     @MockitoBean
     ProductService service;
 
+    @MockitoBean
+    com.seoulection.admin.product.infrastructure.repository.PurchaseLinkRepository purchaseLinkRepository;
+
+    @Test
+    void fourthVisibleLinkRedirectsWithGuidance() throws Exception {
+        given(purchaseLinkRepository.setActive("13", 99L, true)).willReturn(false);
+        mockMvc.perform(post("/admin/products/13/purchase-links/99/active").param("active", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/products/13"))
+                .andExpect(flash().attribute("errorMessage", "구매 링크는 최대 3개까지 노출할 수 있습니다. 기존 링크 하나를 숨긴 후 다시 노출해 주세요."));
+    }
+
     /** 컨트롤러가 자동 조회를 부르지만 이 테스트가 보는 건 검수 폼의 규칙이다 — 대역으로 둔다. */
     @MockitoBean
     FunctionalScreeningService screeningService;

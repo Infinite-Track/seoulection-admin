@@ -2,13 +2,20 @@ package com.seoulection.admin.product.infrastructure.repository;
 import com.seoulection.admin.product.application.dto.PurchaseLinkResult;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 @Repository
 public class PurchaseLinkRepository {
  private final JdbcTemplate jdbc;
  public PurchaseLinkRepository(JdbcTemplate jdbc){this.jdbc=jdbc;}
- public List<PurchaseLinkResult> find(String productId){return jdbc.query("select id,url,domain,region,active from products_url where product_id=? order by active desc, created_at desc",(rs,n)->new PurchaseLinkResult(rs.getLong("id"),rs.getString("url"),rs.getString("domain"),rs.getString("region"),rs.getBoolean("active")),productId);}
- public void add(String productId,String url,String domain,String region){jdbc.update("insert into products_url(product_id,url,domain,region,active,created_at,updated_at) values (?,?,?,?,true,current_timestamp,current_timestamp)",productId,url,domain,region==null||region.isBlank()?"US":region);}
+ public List<PurchaseLinkResult> find(String productId){return jdbc.query("select id,url,domain,region,active,display_order from products_url where product_id=? order by active desc, display_order asc nulls last, created_at desc",(rs,n)->new PurchaseLinkResult(rs.getLong("id"),rs.getString("url"),rs.getString("domain"),rs.getString("region"),rs.getBoolean("active"),(Integer)rs.getObject("display_order")),productId);}
+ @Transactional
+ public boolean add(String productId,String url,String domain,String region){
+  int activeCount=activeCount(productId); boolean active=activeCount<3;
+  Integer order=active?activeCount+1:null;
+  jdbc.update("insert into products_url(product_id,url,domain,region,active,display_order,created_at,updated_at) values (?,?,?,?,?,?,current_timestamp,current_timestamp)",productId,url,domain,region==null||region.isBlank()?"US":region,active,order);
+  return active;
+ }
  /**
   * 이 제품이 사용자 카탈로그(products_catalog)에 있는가.
   *
@@ -30,9 +37,28 @@ public class PurchaseLinkRepository {
   * <p>지우지 않고 숨기는 쪽을 둔 이유: 판매처가 일시 품절이거나 링크가 잠깐 죽었을 때
   * 지웠다가 다시 넣으면 어떤 링크였는지 기록이 사라진다. 숨겨 두면 되살리기만 하면 된다.
   */
- public void setActive(String productId,long id,boolean active){
-  jdbc.update("update products_url set active=?, updated_at=current_timestamp where id=? and product_id=?",active,id,productId);
+ @Transactional
+ public boolean setActive(String productId,long id,boolean active){
+  if(active && activeCount(productId)>=3) return false;
+  Integer order=active?activeCount(productId)+1:null;
+  jdbc.update("update products_url set active=?, display_order=?, updated_at=current_timestamp where id=? and product_id=?",active,order,id,productId);
+  normalize(productId);
+  return true;
  }
 
- public void delete(String productId,long id){jdbc.update("delete from products_url where id=? and product_id=?",id,productId);}
+ @Transactional
+ public void move(String productId,long id,int direction){
+  List<Long> ids=jdbc.queryForList("select id from products_url where product_id=? and active=true order by display_order asc nulls last,id asc",Long.class,productId);
+  int current=ids.indexOf(id), target=current+direction;
+  if(current<0 || target<0 || target>=ids.size()) return;
+  jdbc.update("update products_url set display_order=0 where id=? and product_id=?",id,productId);
+  jdbc.update("update products_url set display_order=? where id=? and product_id=?",current+1,ids.get(target),productId);
+  jdbc.update("update products_url set display_order=? where id=? and product_id=?",target+1,id,productId);
+ }
+
+ private int activeCount(String productId){Integer count=jdbc.queryForObject("select count(*) from products_url where product_id=? and active=true",Integer.class,productId);return count==null?0:count;}
+ private void normalize(String productId){List<Long> ids=jdbc.queryForList("select id from products_url where product_id=? and active=true order by display_order asc nulls last,id asc",Long.class,productId);for(int i=0;i<ids.size();i++)jdbc.update("update products_url set display_order=? where id=?",i+1,ids.get(i));}
+
+ @Transactional
+ public void delete(String productId,long id){jdbc.update("delete from products_url where id=? and product_id=?",id,productId);normalize(productId);}
 }

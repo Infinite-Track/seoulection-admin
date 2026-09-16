@@ -179,7 +179,9 @@ public class ProductController {
         model.addAttribute("productIngredients", service.getProductIngredients(id));
         model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         model.addAttribute("inciapiRawJson", prettyJson(product.inciapiRawData()));
-        model.addAttribute("purchaseLinks", purchaseLinkRepository == null ? List.of() : purchaseLinkRepository.find(id));
+        var purchaseLinks = purchaseLinkRepository == null ? List.<com.seoulection.admin.product.application.dto.PurchaseLinkResult>of() : purchaseLinkRepository.find(id);
+        model.addAttribute("purchaseLinks", purchaseLinks);
+        model.addAttribute("activePurchaseLinkCount", purchaseLinks.stream().filter(link -> link.active()).count());
         // 카탈로그에 없는 제품에는 링크를 달 수 없다(FK). 폼을 감추고 이유를 대신 보여 준다 —
         // 눌러 보고 나서 실패를 알게 하면 그게 곧 흰 화면이었다.
         model.addAttribute("catalogRegistered",
@@ -203,9 +205,11 @@ public class ProductController {
             return "redirect:/admin/products/" + id;
         }
         try {
-            purchaseLinkRepository.add(id, url.trim(),
+            boolean visible = purchaseLinkRepository.add(id, url.trim(),
                     domain == null || domain.isBlank() ? domainFrom(url) : domain.trim(), region);
-            redirectAttributes.addFlashAttribute("successMessage", "구매 링크를 추가했습니다.");
+            redirectAttributes.addFlashAttribute("successMessage", visible
+                    ? "구매 링크를 추가하고 사용자 화면에 노출했습니다."
+                    : "구매 링크를 추가했습니다. 이미 3개가 노출 중이어서 새 링크는 숨김 상태입니다.");
         } catch (DataAccessException e) {
             // 🔴 삼켜서 흰 화면(Whitelabel)이 되지 않게 한다. 어드민에는 전역 예외 핸들러가 없어
             //    여기서 잡지 않으면 어떤 DB 실패든 원인 없는 500 으로 보인다(2026-09-09 실측).
@@ -219,9 +223,24 @@ public class ProductController {
     @PostMapping("/admin/products/{id}/purchase-links/{linkId}/active")
     public String togglePurchaseLink(@PathVariable String id, @PathVariable long linkId,
                                      @RequestParam boolean active, RedirectAttributes redirectAttributes) {
-        purchaseLinkRepository.setActive(id, linkId, active);
-        redirectAttributes.addFlashAttribute("successMessage",
-                active ? "구매 링크를 노출합니다." : "구매 링크를 숨겼습니다. 사용자 화면에서 보이지 않습니다.");
+        try {
+            if (!purchaseLinkRepository.setActive(id, linkId, active)) {
+                redirectAttributes.addFlashAttribute("errorMessage", "구매 링크는 최대 3개까지 노출할 수 있습니다. 기존 링크 하나를 숨긴 후 다시 노출해 주세요.");
+                return "redirect:/admin/products/" + id;
+            }
+            redirectAttributes.addFlashAttribute("successMessage",
+                    active ? "구매 링크를 노출합니다." : "구매 링크를 숨겼습니다. 사용자 화면에서 보이지 않습니다.");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/products/" + id;
+    }
+
+    @PostMapping("/admin/products/{id}/purchase-links/{linkId}/move")
+    public String movePurchaseLink(@PathVariable String id, @PathVariable long linkId,
+                                   @RequestParam int direction, RedirectAttributes redirectAttributes) {
+        purchaseLinkRepository.move(id, linkId, direction < 0 ? -1 : 1);
+        redirectAttributes.addFlashAttribute("successMessage", "사용자 화면의 판매처 순서를 변경했습니다.");
         return "redirect:/admin/products/" + id;
     }
 
