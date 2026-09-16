@@ -129,7 +129,7 @@
                 <!-- 카탈로그에 없는 제품에는 FK 때문에 링크를 달 수 없다. 폼을 감추고 이유를 적는다 —
                      눌러 보고 실패를 알게 하면 그게 곧 흰 화면이었다. -->
                 <div class="empty" th:unless="${catalogRegistered}">
-                    <span>아직 사용자 카탈로그에 등록되지 않은 제품입니다. 분석이 끝나 카탈로그에 올라간 뒤에 구매 링크를 추가할 수 있습니다.</span>
+                    <span>ASIN으로 연결되는 사용자 카탈로그 제품을 확인할 수 없습니다. 제품 ASIN과 카탈로그 등록 상태를 확인해 주세요.</span>
                 </div>
 
                 <div class="form-section" th:if="${catalogRegistered}">

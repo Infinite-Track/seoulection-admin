@@ -4,10 +4,18 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Optional;
 @Repository
 public class PurchaseLinkRepository {
  private final JdbcTemplate jdbc;
  public PurchaseLinkRepository(JdbcTemplate jdbc){this.jdbc=jdbc;}
+ /** Mongo document IDs and PostgreSQL catalog IDs are independent; join by ASIN only. */
+ public Optional<String> catalogIdByAsin(String asin){
+  if(asin==null || asin.isBlank()) return Optional.empty();
+  List<String> ids=jdbc.queryForList("select id from products_catalog where asin=?",String.class,asin.trim());
+  // Never modify an arbitrary product if the catalog contains ambiguous ASINs.
+  return ids.size()==1?Optional.of(ids.get(0)):Optional.empty();
+ }
  public List<PurchaseLinkResult> find(String productId){return jdbc.query("select id,url,domain,region,active,display_order from products_url where product_id=? order by active desc, display_order asc nulls last, created_at desc",(rs,n)->new PurchaseLinkResult(rs.getLong("id"),rs.getString("url"),rs.getString("domain"),rs.getString("region"),rs.getBoolean("active"),(Integer)rs.getObject("display_order")),productId);}
  @Transactional
  public boolean add(String productId,String url,String domain,String region){
