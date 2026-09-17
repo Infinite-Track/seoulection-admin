@@ -66,6 +66,13 @@ public class ProductService {
         return ProductPage.from(found.map(ProductResult::from));
     }
 
+    /** Automatic queue scans use registration order, independently of the UI listing. */
+    public ProductPage getFunctionalScreeningProductsOldestFirst(int page, int size) {
+        var found = repository.find(null, List.of(ProductStatus.INGREDIENTS_ADDED),
+                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "created_at", "_id")));
+        return ProductPage.from(found.map(ProductResult::from));
+    }
+
     /** 탭 배지·소계용 상태별 건수. 검색 중이면 검색 결과 기준으로 센다. */
     public Map<ProductStatus, Long> countByStatus(String keyword) {
         return repository.countByStatus(keyword);

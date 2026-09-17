@@ -1,6 +1,6 @@
 package com.seoulection.admin.product.functional.presentation;
 
-import com.seoulection.admin.product.functional.application.FunctionalScreeningService;
+import com.seoulection.admin.product.functional.application.FunctionalScreeningQueue;
 import com.seoulection.admin.product.functional.domain.FunctionalScreening;
 import com.seoulection.admin.product.functional.domain.ScreeningOutcome;
 import org.springframework.stereotype.Controller;
@@ -25,29 +25,28 @@ public class FunctionalScreeningController {
     /** 한 번에 훑을 상한. 안전나라가 제품당 여러 번 불려서 무제한으로 돌리면 쿼터가 먼저 나간다. */
     private static final int DEFAULT_BATCH_LIMIT = 50;
 
-    private final FunctionalScreeningService service;
+    private final FunctionalScreeningQueue service;
 
-    public FunctionalScreeningController(FunctionalScreeningService service) {
+    public FunctionalScreeningController(FunctionalScreeningQueue service) {
         this.service = service;
     }
 
     @PostMapping("/admin/products/{id}/functional-screening")
     public String rescreen(@PathVariable String id, RedirectAttributes redirectAttributes) {
-        FunctionalScreening screening = service.screen(id);
-        redirectAttributes.addFlashAttribute("successMessage",
-                "자동 조회를 다시 실행했습니다 — " + screening.outcome().displayName() + ": " + screening.reason());
+        String message = service.enqueue(id, true);
+        redirectAttributes.addFlashAttribute(message.startsWith("조회 대기열에 등록") ? "successMessage" : "errorMessage", message);
         return "redirect:/admin/products/" + id + "/workflow?step=functional";
     }
 
     @PostMapping("/admin/products/functional-screening")
     public String rescreenQueue(@RequestParam(required = false) Integer limit,
                                 RedirectAttributes redirectAttributes) {
-        Map<ScreeningOutcome, Integer> summary = service.screenQueue(limit == null ? DEFAULT_BATCH_LIMIT : limit);
-        String detail = summary.isEmpty() ? "처리할 제품이 없습니다"
-                : summary.entrySet().stream()
-                        .map(entry -> entry.getKey().displayName() + " " + entry.getValue() + "건")
-                        .collect(Collectors.joining(", "));
-        redirectAttributes.addFlashAttribute("successMessage", "기능성 자동 조회 완료 — " + detail);
+        int count = service.enqueueEligible(limit == null ? DEFAULT_BATCH_LIMIT : limit);
+        redirectAttributes.addFlashAttribute("successMessage", "기능성 조회 대기열에 " + count + "건 등록했습니다.");
         return "redirect:/admin/products?stage=functional-review";
     }
+
+    @org.springframework.web.bind.annotation.GetMapping("/admin/products/{id}/functional-screening/status")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public Map<String, Object> status(@PathVariable String id) { return service.status(id); }
 }

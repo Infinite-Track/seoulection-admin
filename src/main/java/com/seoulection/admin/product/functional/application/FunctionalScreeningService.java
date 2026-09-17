@@ -82,11 +82,6 @@ public class FunctionalScreeningService {
         return properties.isEnabled();
     }
 
-    /** 자동 판정이 상태까지 옮기는 모드인가. 화면 문구와 이동 경로가 이걸로 갈린다. */
-    public boolean appliesDecisions() {
-        return properties.isApplyDecisions();
-    }
-
     /**
      * <b>자동화의 진입점.</b> 어드민이 한글 이름을 저장한 직후에 불린다.
      *
@@ -94,8 +89,7 @@ public class FunctionalScreeningService {
      * 영문 제품명만으로는 조회가 시작조차 안 되고, 한글 이름이 채워진 그 순간이 자동 조회가
      * 가장 잘 듣는 시점이다. 그래서 4단계 마법사의 "한글 이름" 저장이 곧 기능성 조회 트리거다.
      *
-     * <p>결과가 나오면 기능성까지 확정돼 다음 단계로 넘어가고, 못 찾으면 기능성 폼이 열린 채
-     * 후보만 채워진다 — 그때만 사람이 고른다.
+     * <p>조회 결과와 추천 후보만 저장한다. 최종 기능성과 제품 상태는 관리자가 확정한다.
      */
     public Optional<FunctionalScreening> screenAfterNameSaved(String productId) {
         if (!properties.isEnabled()) {
@@ -162,6 +156,10 @@ public class FunctionalScreeningService {
     }
 
     public FunctionalScreening screen(ProductResult product) {
+        return screen(product, () -> true);
+    }
+
+    public FunctionalScreening screen(ProductResult product, java.util.function.BooleanSupplier stillValid) {
         ScreeningTarget target = ScreeningTarget.from(product);
         FunctionalScreening screening;
         try {
@@ -171,8 +169,7 @@ public class FunctionalScreeningService {
             log.warn("기능성 자동 판정 실패 productId={}", target.id(), e);
             screening = FunctionalScreening.failed(target.id(), "조회 중 오류: " + e.getMessage());
         }
-        repository.save(screening);
-        applyIfDecided(product, screening);
+        if (stillValid.getAsBoolean()) repository.save(screening);
         return screening;
     }
 
@@ -306,18 +303,6 @@ public class FunctionalScreeningService {
         return new FunctionalScreening(target.id(), ScreeningOutcome.NOT_MATCHED, List.of(), List.of(), -1,
                 "LOW", reason, brandCount, FunctionalScreening.DECIDED_BY_AUTO,
                 FunctionalScreening.ENGINE_VERSION, Instant.now());
-    }
-
-    /** 자동 확정을 실제 상태 전진으로 옮긴다. 그림자 모드면 판정만 남기고 상태는 그대로 둔다. */
-    private void applyIfDecided(ProductResult product, FunctionalScreening screening) {
-        if (!properties.isApplyDecisions() || !screening.outcome().decided()) {
-            return;
-        }
-        if (product.status() != ProductStatus.INGREDIENTS_ADDED) {
-            return; // 이미 사람이 손댔거나 파이프라인이 지나간 제품은 건드리지 않는다.
-        }
-        productService.reviewFunction(product.id(),
-                screening.claims().stream().map(ProductFunctionalCategory::code).toList());
     }
 
     // ── 조회 재료 ────────────────────────────────────────────────────────────

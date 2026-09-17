@@ -21,6 +21,20 @@ import static org.mockito.BDDMockito.given;
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
 
+    @Test
+    void automaticScreeningScanUsesOldestRegistrationFirst() {
+        given(repository.find(org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.eq(java.util.List.of(ProductStatus.INGREDIENTS_ADDED)),
+                any(org.springframework.data.domain.Pageable.class)))
+                .willReturn(org.springframework.data.domain.Page.empty());
+        service.getFunctionalScreeningProductsOldestFirst(0, 50);
+        var pageable = org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+        org.mockito.Mockito.verify(repository).find(org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.eq(java.util.List.of(ProductStatus.INGREDIENTS_ADDED)), pageable.capture());
+        assertThat(pageable.getValue().getSort()).isEqualTo(
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "created_at", "_id"));
+    }
+
     @Mock
     ProductRepository repository;
 

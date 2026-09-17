@@ -42,13 +42,22 @@ public class ProductController {
     private final FunctionalScreeningService screeningService;
     private final ObjectMapper objectMapper;
     private final PurchaseLinkRepository purchaseLinkRepository;
+    private final com.seoulection.admin.product.functional.application.FunctionalScreeningQueue screeningQueue;
+    private final com.seoulection.admin.product.functional.application.FunctionalScreeningList screeningList;
+    private final ObjectProvider<com.seoulection.admin.product.functional.application.FunctionalScreeningQueueSettings> queueSettings;
 
     public ProductController(ProductService service, FunctionalScreeningService screeningService,
-                             ObjectMapper objectMapper, ObjectProvider<PurchaseLinkRepository> purchaseLinkRepository) {
+                             ObjectMapper objectMapper, ObjectProvider<PurchaseLinkRepository> purchaseLinkRepository,
+                             ObjectProvider<com.seoulection.admin.product.functional.application.FunctionalScreeningQueue> screeningQueue,
+                             ObjectProvider<com.seoulection.admin.product.functional.application.FunctionalScreeningList> screeningList,
+                             ObjectProvider<com.seoulection.admin.product.functional.application.FunctionalScreeningQueueSettings> queueSettings) {
         this.service = service;
         this.screeningService = screeningService;
         this.objectMapper = objectMapper;
         this.purchaseLinkRepository = purchaseLinkRepository.getIfAvailable();
+        this.screeningQueue = screeningQueue.getIfAvailable();
+        this.screeningList = screeningList.getIfAvailable();
+        this.queueSettings = queueSettings;
     }
 
     /**
@@ -63,11 +72,35 @@ public class ProductController {
                        @RequestParam(required = false) String status,
                        @RequestParam(required = false) String q,
                        @RequestParam(defaultValue = "0") int page,
+                       @RequestParam(defaultValue = "") String screeningStatus,
+                       @RequestParam(defaultValue = "oldest") String order,
+                       @RequestParam(defaultValue = "list") String tab,
                        Model model) {
         if (!model.containsAttribute("request")) {
             model.addAttribute("request", new ProductRegisterRequest());
         }
         populateProductList(model, stage, status, q, page);
+        boolean settingsTab = "functional-review".equals(stage) && "settings".equals(tab);
+        model.addAttribute("settingsTab", settingsTab);
+        String selectedOrder = "newest".equals(order) ? "newest" : "oldest";
+        model.addAttribute("selectedOrder", selectedOrder);
+        if (settingsTab) {
+            var settings = queueSettings.getObject();
+            model.addAttribute("settings", settings.get());
+            model.addAttribute("activeCount", settings.activeCount());
+            model.addAttribute("screeningEnabled", screeningService.isEnabled());
+        }
+        if ("functional-review".equals(stage) && !settingsTab && screeningList != null) {
+            var states = com.seoulection.admin.product.functional.application.FunctionalScreeningList.State.values();
+            String selected = java.util.Arrays.stream(states).anyMatch(s -> s.name().equals(screeningStatus)) ? screeningStatus : "";
+            var result = screeningList.find(q, selected, page, PAGE_SIZE, selectedOrder);
+            model.addAttribute("page", result.page());
+            model.addAttribute("screeningStates", states);
+            model.addAttribute("screeningCounts", result.counts().entrySet().stream().collect(java.util.stream.Collectors.toMap(e -> e.getKey().name(), java.util.Map.Entry::getValue)));
+            model.addAttribute("screeningTotal", result.counts().values().stream().mapToLong(Long::longValue).sum());
+            model.addAttribute("screeningRowStates", result.states());
+            model.addAttribute("selectedScreeningStatus", selected);
+        }
         return "products";
     }
 
@@ -399,7 +432,7 @@ public class ProductController {
      * <p>확정되면 큐로 돌아가고, 못 찾으면 같은 화면에 남아 후보와 사유를 보여 준다 —
      * 어드민이 손대는 건 그때뿐이다.
      */
-    @PostMapping("/admin/products/{id}/workflow/functional-screening")
+    @PostMapping(value="/admin/products/{id}/workflow/functional-screening", produces="text/html")
     public String workflowScreen(@PathVariable String id, @RequestParam(required = false) String nameKo,
                                  RedirectAttributes redirectAttributes) {
         if (nameKo == null || nameKo.isBlank()) {
@@ -410,33 +443,19 @@ public class ProductController {
         var current = service.getProduct(id);
         service.updateBasicInfo(id, current.name(), nameKo.trim(), current.brand(), current.category());
 
-        var screened = screeningService.screenAfterNameSaved(id);
-        if (screened.isEmpty()) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "자동 조회가 꺼져 있습니다(admin.functional-screening.enabled). 아래에서 직접 입력해 주세요.");
-            return "redirect:/admin/products/" + id + "/workflow?step=functional";
-        }
-
-        FunctionalScreening screening = screened.get();
-        if (screening.outcome().decided() && screeningService.appliesDecisions()) {
-            // 규제 정보가 조용히 저장되고 화면만 넘어가면 나중에 되짚을 실마리가 없다 —
-            // 무엇이 어떤 근거로 기록됐는지 문구로 남긴다.
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "한글 이름을 저장하고 기능성을 자동 확정했습니다 — " + describe(screening));
-            return "redirect:/admin/products?stage=functional-review";
-        }
-        if (screening.outcome().decided()) {
-            // 판정은 끝났지만 확정은 사람이 한다. 폼이 미리 채워진 채로 열리고, 어드민은
-            // 근거를 보고 저장만 누르면 된다.
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "자동 조회 결과를 아래에 채워 두었습니다 — " + describe(screening)
-                            + " 확인 후 저장을 눌러 확정해 주세요.");
-            return "redirect:/admin/products/" + id + "/workflow?step=functional";
-        }
-        redirectAttributes.addFlashAttribute("errorMessage",
-                "자동 조회로 확정하지 못했습니다(" + screening.outcome().displayName() + "): "
-                        + screening.reason() + " 아래에서 직접 확인해 주세요.");
+        String message = screeningQueue == null ? "조회 큐를 사용할 수 없습니다." : screeningQueue.enqueue(id, true);
+        redirectAttributes.addFlashAttribute(message.startsWith("조회 대기열에 등록") ? "successMessage" : "errorMessage", message);
         return "redirect:/admin/products/" + id + "/workflow?step=functional";
+    }
+
+    @PostMapping(value="/admin/products/{id}/workflow/functional-screening", produces="application/json")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public Map<String, Object> workflowScreenJson(@PathVariable String id, @RequestParam(required=false) String nameKo) {
+        var attributes = new org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap();
+        workflowScreen(id, nameKo, attributes);
+        var flash = attributes.getFlashAttributes();
+        boolean accepted = flash.containsKey("successMessage");
+        return Map.of("accepted", accepted, "message", flash.get(accepted ? "successMessage" : "errorMessage"));
     }
 
     /**
@@ -554,11 +573,18 @@ public class ProductController {
             model.addAttribute("propertyDefinitions", service.propertyDefinitions());
         }
         if ("functional".equals(resolved)) {
-            // 한글 이름이 이미 있으면 화면을 여는 것만으로 자동 조회가 한 번 돈다. 없으면
-            // 조회할 근거가 없으니 아무것도 하지 않고 입력 칸만 보여 준다.
+            // Screen entry only reads stored results and job state; external calls belong to the worker.
             try {
-                var screening = screeningService.findOrScreen(id).orElse(null);
+                var screening = screeningService.find(id).orElse(null);
                 model.addAttribute("screening", screening);
+                if (screeningQueue != null) {
+                    var job = screeningQueue.status(id);
+                    model.addAttribute("screeningJob", job);
+                    if (List.of("QUEUED", "RUNNING").contains(job.get("status"))) {
+                        screening = null;
+                        model.addAttribute("screening", null);
+                    }
+                }
                 prefillFromScreening(request, product, screening);
             } catch (RuntimeException e) {
                 // 외부 식약처 조회 실패가 검수 화면 전체를 500으로 만들지 않게 한다.
