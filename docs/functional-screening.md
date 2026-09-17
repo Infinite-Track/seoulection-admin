@@ -297,7 +297,6 @@ functional_screenings
 admin:
   functional-screening:
     enabled: true
-    apply-decisions: false      # 자동 확정이 상태까지 옮길지. 기본 꺼짐 — 확정은 어드민이
     auto-threshold: 0.95        # 이 점수 이상이면 판정 없이도 확정 후보
     candidate-threshold: 0.60   # 이 미만은 strong 으로 보지 않는다
     coverage-threshold: 0.95    # 이름을 일부만 적은 경우를 건지는 값
@@ -336,7 +335,7 @@ admin:
 ## 11. 남은 것
 
 1. **AUTO_NONE 켜기** — 브랜드 0건 케이스의 정확도를 실제 데이터로 확인한 뒤에만
-2. **apply-decisions 켜기** — 자동 확정과 사람 판단의 일치율을 본 뒤에
+2. **최종 확정은 관리자만** — 자동 적용 설정과 FUNCTIONAL_SCREENING_APPLY 환경변수는 제거됨
 3. **밀린 제품 일괄 조회** — `POST /admin/products/functional-screening`이 큐를 훑는다
    (기본 50건). 목록 화면에 버튼은 아직 없다
 4. **재판정** — 규칙을 고치면 `engine_version`이 다른 판정을 골라 다시 돌리는 일이 필요해진다

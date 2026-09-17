@@ -9,17 +9,6 @@ public class FunctionalScreeningProperties {
     private boolean enabled = true;
 
     /**
-     * 자동 판정 결과로 제품 상태까지 바로 옮길지. <b>기본은 꺼짐</b>.
-     *
-     * <p>자동 조회는 근거를 모아 폼을 채워 두는 데까지만 하고, 확정은 어드민이 누른다.
-     * 기능성은 규제 정보라 "모델이 골랐다"와 "사람이 확인했다" 사이에 한 칸이 있어야 한다 —
-     * 자동 판정이 틀렸을 때 되돌리는 비용이 한 번 더 클릭하는 비용보다 훨씬 크다.
-     *
-     * <p>켜면 판정이 끝나는 즉시 상태가 전진한다. 일치율을 충분히 확인한 뒤에 켤 스위치다.
-     */
-    private boolean applyDecisions = false;
-
-    /**
      * 자동 확정에 필요한 점수. 이름이 이 정도로 같으면 판정을 부르지 않고 확정 후보로 본다.
      *
      * <p>다만 점수 하나로 확정되지는 않는다 — 숫자 토큰 일치, 업체명 연결, 기능성 유형 도출을
@@ -68,8 +57,6 @@ public class FunctionalScreeningProperties {
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
-    public boolean isApplyDecisions() { return applyDecisions; }
-    public void setApplyDecisions(boolean applyDecisions) { this.applyDecisions = applyDecisions; }
     public double getAutoThreshold() { return autoThreshold; }
     public void setAutoThreshold(double autoThreshold) { this.autoThreshold = autoThreshold; }
     public double getCandidateThreshold() { return candidateThreshold; }

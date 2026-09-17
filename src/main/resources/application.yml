@@ -1,4 +1,8 @@
 spring:
+  task:
+    scheduling:
+      pool:
+        size: 2
   application:
     name: seoulection-admin
   mongodb:
@@ -22,13 +26,12 @@ spring:
     cache: false
 
 # 기능성 자동 판정. 한글 이름을 저장하면 의약품안전나라(심사·보고)를 조회해 기능성까지 기록하고,
-# 확정하지 못한 건만 어드민 큐에 남는다. 자세한 설계는 docs/functional-screening.md 참조.
+# 조회는 DB 큐에서 직렬 처리하며 최종 확정은 관리자가 한다.
 admin:
   functional-screening:
     enabled: ${FUNCTIONAL_SCREENING_ENABLED:true}
     # 자동 판정이 상태까지 바로 옮길지. 기본은 꺼짐 — 조회는 근거를 모아 폼을 채워 두고,
     # 확정은 어드민이 저장을 눌러 한다. 일치율을 충분히 본 뒤에 켤 스위치다.
-    apply-decisions: ${FUNCTIONAL_SCREENING_APPLY:false}
     auto-threshold: 0.95        # 이 점수 이상이면 판정 없이도 확정 후보(숫자·업체·유형 규칙은 별도)
     candidate-threshold: 0.60   # 이 미만은 후보로도 남기지 않는다
     max-candidates: 8   # 이름을 일부만 적으면 같은 계열이 여럿 걸린다

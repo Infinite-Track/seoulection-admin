@@ -426,6 +426,26 @@ select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0
 .product-table th:last-child { width: 132px; }
 .product-table .is-functional { background: var(--accent-soft); color: var(--accent); }
 
+/* Functional review has seven columns, unlike the regular nine-column table. */
+.screening-product-table th:nth-child(1) { width: auto; }
+.screening-product-table th:nth-child(2) { width: 140px; }
+.screening-product-table th:nth-child(3) { width: 160px; }
+.screening-product-table th:nth-child(4) { width: 140px; }
+.screening-product-table th:nth-child(5) { width: 70px; }
+.screening-product-table th:nth-child(6) { width: 170px; }
+.screening-product-table th:nth-child(7) { width: 132px; }
+.screening-product-table td { vertical-align: middle; }
+.screening-product-table .product-name-link {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+}
+.screening-product-table td:nth-child(2),
+.screening-product-table td:nth-child(3) { overflow-wrap: anywhere; }
+
 /* ── Toolbar: 상태 탭 + 화면 액션 ──
    탭 배지가 이 화면의 요약 숫자를 겸한다. 별도 통계 카드 줄을 두면 같은 값이 두 번 나온다. */
 
@@ -1297,3 +1317,10 @@ td a:hover { text-decoration: underline; }
     .search-input-wrap { align-items: stretch; flex-direction: column; }
     .search-input-wrap .search-icon { top: 11px; }
 }
+.screening-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.screening-switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.screening-switch-track { width: 42px; height: 24px; border-radius: 24px; background: #94a3b8; padding: 3px; box-sizing: border-box; transition: background .15s; }
+.screening-switch-track::after { content: ''; display: block; width: 18px; height: 18px; border-radius: 50%; background: white; transition: transform .15s; }
+.screening-switch input:checked + .screening-switch-track { background: #486575; }
+.screening-switch input:checked + .screening-switch-track::after { transform: translateX(18px); }
+.screening-switch input:focus-visible + .screening-switch-track { outline: 2px solid #486575; outline-offset: 3px; }

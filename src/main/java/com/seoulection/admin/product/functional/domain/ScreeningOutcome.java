@@ -9,8 +9,9 @@ package com.seoulection.admin.product.functional.domain;
  */
 public enum ScreeningOutcome {
 
-    AUTO_CONFIRMED("자동 확정", "success", false),
-    AUTO_NONE("자동 확정(기능성 아님)", "success", false),
+    // Keep persisted enum codes compatible; these are recommendations, never final approval.
+    AUTO_CONFIRMED("추천 후보(관리자 확인 필요)", "success", true),
+    AUTO_NONE("기능성 없음 추정(관리자 확인 필요)", "warning", true),
     NEEDS_REVIEW("확인 필요", "warning", true),
     NOT_MATCHED("검색 결과 없음", "warning", true),
     FAILED("조회 실패", "danger", true);

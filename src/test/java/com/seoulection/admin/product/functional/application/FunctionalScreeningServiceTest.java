@@ -73,9 +73,8 @@ class FunctionalScreeningServiceTest {
     }
 
     @Test
-    @DisplayName("적용 모드를 켜면 자동 확정이 상태까지 옮긴다")
+    @DisplayName("추천 판정이 나와도 최종 기능성과 제품 상태는 자동 저장하지 않는다")
     void confirmsAndAdvancesStatus() {
-        properties.setApplyDecisions(true);
         catalog.brand("구달", List.of(
                 item("구달청귤비타씨잡티세럼", "(주)클리오",
                         "피부의 미백에 도움을 준다. 피부의 주름개선에 도움을 준다.", null, null)));
@@ -85,7 +84,7 @@ class FunctionalScreeningServiceTest {
         assertThat(screening.outcome()).isEqualTo(ScreeningOutcome.AUTO_CONFIRMED);
         assertThat(screening.claims()).containsExactlyInAnyOrder(
                 ProductFunctionalCategory.WHITENING, ProductFunctionalCategory.WRINKLE_IMPROVEMENT);
-        verify(productService).reviewFunction("p1", List.of("WHITENING", "WRINKLE_IMPROVEMENT"));
+        verify(productService, never()).reviewFunction(anyString(), anyList());
     }
 
     @Test
@@ -123,11 +122,10 @@ class FunctionalScreeningServiceTest {
         assertThat(service().screen(target).outcome()).isEqualTo(ScreeningOutcome.NOT_MATCHED);
 
         properties.setAutoConcludeNone(true);
-        properties.setApplyDecisions(true);
         FunctionalScreening screening = service().screen(target);
         assertThat(screening.outcome()).isEqualTo(ScreeningOutcome.AUTO_NONE);
         assertThat(screening.claims()).isEmpty();
-        verify(productService).reviewFunction("p1", List.of());
+        verify(productService, never()).reviewFunction(anyString(), anyList());
     }
 
     @Test

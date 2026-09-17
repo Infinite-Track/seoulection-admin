@@ -102,11 +102,23 @@
         form.addEventListener('submit', () => {
             const label = form.dataset.busy || '처리 중…';
             form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach((button) => {
+                if (!button.dataset.originalContent) button.dataset.originalContent = button.innerHTML;
                 button.classList.add('is-busy');
                 button.innerHTML = '<span class="spinner"></span>' + label;
             });
             form.classList.add('is-busy');
             showBar();
         });
+    });
+    // Browser back/forward cache preserves the loading DOM, so restore it on return.
+    window.addEventListener('pageshow', () => {
+        document.querySelectorAll('form[data-busy].is-busy').forEach((form) => {
+            form.classList.remove('is-busy');
+            form.querySelectorAll('.is-busy').forEach((button) => {
+                button.classList.remove('is-busy');
+                if (button.dataset.originalContent) button.innerHTML = button.dataset.originalContent;
+            });
+        });
+        document.querySelectorAll('.busy-bar').forEach((bar) => bar.remove());
     });
 })();
