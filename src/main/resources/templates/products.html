@@ -57,7 +57,14 @@
                     </a>
                 </nav>
             </div>
-            <section class="card is-flush">
+            <nav class="tabs" th:if="${selectedStageSlug == 'functional-review'}" aria-label="기능성 확인 보기">
+                <a th:href="@{/admin/products(stage='functional-review',q=${query},order=${selectedOrder})}" th:classappend="${settingsTab != true} ? ' is-active' : ''">제품 목록</a>
+                <a th:href="@{/admin/products(stage='functional-review',tab='settings')}" th:classappend="${settingsTab == true} ? ' is-active' : ''">설정</a>
+            </nav>
+            <th:block th:if="${settingsTab == true}">
+                <div th:replace="~{functional-screening-settings :: panel}"></div>
+            </th:block>
+            <section class="card is-flush" th:unless="${settingsTab == true}">
                 <div class="panel-header">
                     <div>
                         <h2>등록된 제품<span class="count-inline" th:text="${page.totalElements()}"></span></h2>
@@ -80,26 +87,48 @@
                     </div>
                     <form class="toolbar-search" method="get" th:action="@{/admin/products}" role="search">
                         <input type="hidden" name="stage" th:value="${selectedStageSlug}">
+                        <input type="hidden" name="screeningStatus" th:if="${selectedScreeningStatus != null}" th:value="${selectedScreeningStatus}">
+                        <input type="hidden" name="order" th:if="${selectedStageSlug == 'functional-review'}" th:value="${selectedOrder}">
                         <input type="hidden" name="status" th:value="${selectedStatus}">
                         <span class="search-icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                         </span>
                         <input type="search" name="q" th:value="${query}" placeholder="제품명 · 브랜드 검색" aria-label="제품명 또는 브랜드로 검색">
-                        <a class="btn-ghost" th:if="${!#strings.isEmpty(query)}" th:href="@{/admin/products(stage=${selectedStageSlug})}">초기화</a>
+                        <a class="btn-ghost" th:if="${!#strings.isEmpty(query)}" th:href="@{/admin/products(stage=${selectedStageSlug},order=${selectedOrder})}">초기화</a>
                     </form>
                 </div>
+                <div class="form-section" th:if="${screeningStates != null}">
+                    <div class="chip-list" aria-label="등록일 정렬" style="margin-bottom: 12px">
+                        <a class="data-chip" th:classappend="${selectedOrder == 'oldest'} ? ' is-picked' : ' is-neutral'"
+                           th:attr="aria-current=${selectedOrder == 'oldest' ? 'true' : null}"
+                           th:href="@{/admin/products(stage='functional-review',q=${query},screeningStatus=${selectedScreeningStatus},order='oldest')}">오래된 순</a>
+                        <a class="data-chip" th:classappend="${selectedOrder == 'newest'} ? ' is-picked' : ' is-neutral'"
+                           th:attr="aria-current=${selectedOrder == 'newest' ? 'true' : null}"
+                           th:href="@{/admin/products(stage='functional-review',q=${query},screeningStatus=${selectedScreeningStatus},order='newest')}">최신순</a>
+                    </div>
+                    <div class="chip-list" aria-label="기능성 조회 상태 필터">
+                        <a class="data-chip" th:classappend="${#strings.isEmpty(selectedScreeningStatus)} ? ' is-picked' : ' is-neutral'"
+                           th:href="@{/admin/products(stage='functional-review',q=${query},order=${selectedOrder})}"
+                           th:text="'전체 ' + ${screeningTotal}"></a>
+                        <a class="data-chip" th:each="s : ${screeningStates}"
+                           th:classappend="${selectedScreeningStatus == s.name()} ? ' is-picked' : ' is-neutral'"
+                           th:href="@{/admin/products(stage='functional-review',q=${query},screeningStatus=${s.name()},order=${selectedOrder})}"
+                           th:text="${s.label()} + ' ' + ${screeningCounts[s.name()]}"></a>
+                    </div>
+                    <p class="form-help">조회 완료는 후보와 추천이 준비된 상태이며 기능성 확정이 아닙니다. 등록 대기는 아직 큐에 등록되지 않은 제품입니다. 목록은 등록일 기준이며 조회 상태가 바뀌어도 순서는 유지됩니다.</p>
+                </div>
                 <div class="table-scroll" th:if="${!page.isEmpty()}">
-                    <table class="admin-table product-table">
+                    <table class="admin-table product-table" th:classappend="${selectedStageSlug == 'functional-review'} ? ' screening-product-table' : ''">
                         <thead>
-                        <tr><th>제품명</th><th>ASIN</th><th>브랜드</th><th>카테고리</th><th>기능성</th><th class="is-numeric">성분</th><th>상태</th><th>검수</th></tr>
+                        <tr><th>제품명</th><th>ASIN</th><th>브랜드</th><th>카테고리</th><th th:unless="${selectedStageSlug == 'functional-review'}">기능성</th><th class="is-numeric">성분</th><th th:unless="${selectedStageSlug == 'functional-review'}">상태</th><th th:if="${screeningStates != null}">조회 상태</th><th>관리</th></tr>
                         </thead>
                         <tbody>
                         <tr th:each="product : ${page.content()}">
-                            <td class="cell-strong"><a th:href="@{'/admin/products/' + ${product.id}}" th:text="${product.name ?: '미입력'}"></a></td>
+                            <td class="cell-strong"><a class="product-name-link" th:href="@{'/admin/products/' + ${product.id}}" th:title="${product.name ?: '미입력'}" th:text="${product.name ?: '미입력'}"></a></td>
                             <td class="enrichment-id" th:text="${product.asin ?: '—'}"></td>
                             <td th:text="${product.brand}"></td>
                             <td><span class="data-chip is-neutral" th:text="${product.category}"></span></td>
-                            <td>
+                            <td th:unless="${selectedStageSlug == 'functional-review'}">
                                 <div class="chip-list">
                                     <span class="badge badge-warning" th:unless="${product.status.functionalReviewDone()}">미검수</span>
                                     <span class="badge badge-neutral" th:if="${product.status.functionalReviewDone() && !product.hasFunction()}">아님</span>
@@ -107,14 +136,18 @@
                                 </div>
                             </td>
                             <td class="is-numeric" th:text="${product.ingredientCount()}"></td>
-                            <td>
+                            <td th:unless="${selectedStageSlug == 'functional-review'}">
                                 <span class="badge is-status" th:classappend="${' badge-' + product.status.tone()}"
                                       th:text="${product.status.displayName()}"></span>
+                            </td>
+                            <td th:if="${screeningStates != null}">
+                                <span class="badge" th:classappend="' badge-' + ${screeningRowStates[product.id].tone()}"
+                                      th:text="${screeningRowStates[product.id].label()}"></span>
                             </td>
                             <td class="admin-actions">
                                 <a class="text-link" th:if="${product.status.workflowStep() != null}"
                                    th:href="@{'/admin/products/' + ${product.id} + '/workflow'}"
-                                   th:text="${product.status.actionLabel()}"></a>
+                                   th:text="${selectedStageSlug == 'functional-review'} ? '후보 검수' : ${product.status.actionLabel()}"></a>
                                 <a class="text-link" th:if="${product.status.workflowStep() == null}"
                                    th:href="@{'/admin/products/' + ${product.id}}">상세 보기</a>
                             </td>
@@ -127,11 +160,11 @@
                           th:text="|${page.firstItem()}-${page.lastItem()} / ${page.totalElements()}|"></span>
                     <div class="pagination-buttons">
                         <a th:if="${page.hasPrevious()}"
-                           th:href="@{/admin/products(stage=${selectedStageSlug},status=${selectedStatus},q=${#strings.isEmpty(query) ? null : query},page=${page.page() - 1})}">이전</a>
+                           th:href="@{/admin/products(stage=${selectedStageSlug},status=${selectedStatus},q=${#strings.isEmpty(query) ? null : query},screeningStatus=${selectedScreeningStatus},order=${selectedStageSlug == 'functional-review' ? selectedOrder : null},page=${page.page() - 1})}">이전</a>
                         <span th:unless="${page.hasPrevious()}" class="is-disabled">이전</span>
                         <span class="pagination-page" th:text="|${page.page() + 1} / ${page.totalPages()}|"></span>
                         <a th:if="${page.hasNext()}"
-                           th:href="@{/admin/products(stage=${selectedStageSlug},status=${selectedStatus},q=${#strings.isEmpty(query) ? null : query},page=${page.page() + 1})}">다음</a>
+                           th:href="@{/admin/products(stage=${selectedStageSlug},status=${selectedStatus},q=${#strings.isEmpty(query) ? null : query},screeningStatus=${selectedScreeningStatus},order=${selectedStageSlug == 'functional-review' ? selectedOrder : null},page=${page.page() + 1})}">다음</a>
                         <span th:unless="${page.hasNext()}" class="is-disabled">다음</span>
                     </div>
                 </nav>
@@ -219,5 +252,11 @@
     </form>
 </aside>
 <script th:src="@{/js/admin.js}"></script>
+<script>
+    // Revalidate job states when returning from detail through the browser's page cache.
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted && new URL(location.href).searchParams.get('stage') === 'functional-review') location.reload();
+    });
+</script>
 </body>
 </html>

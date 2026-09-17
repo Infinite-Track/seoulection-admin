@@ -20,6 +20,7 @@
             </div>
         </header>
         <main class="content content-narrow">
+            <div class="alert alert-success" role="status" th:if="${successMessage}" th:text="${successMessage}"></div>
             <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
             <div class="alert alert-error" th:if="${screeningError}" th:text="${screeningError}"></div>
 
@@ -99,7 +100,7 @@
                     </div>
                     <!-- ── 자동 조회. 한글 이름이 트리거다 — 안전나라 등록명이 전부 한글이라
                          영문명으로는 조회가 시작조차 안 된다. ── -->
-                    <form class="form-section" data-busy="의약품안전나라 조회 중…"
+                    <form class="form-section" data-screening-enqueue data-busy="조회 대기열 등록 중…"
                           th:action="@{'/admin/products/' + ${product.id} + '/workflow/functional-screening'}" method="post">
                         <div class="form-section-title">한글 이름으로 자동 조회</div>
                         <div class="form-grid">
@@ -108,13 +109,20 @@
                                 <input id="autoNameKo" name="nameKo" type="text" th:value="${product.nameKo}"
                                        placeholder="예: 구달 청귤 비타C 잡티 세럼">
                                 <p class="form-help">
-                                    저장과 동시에 의약품안전나라(기능성화장품 심사·보고)를 조회해 기능성 여부를 기록합니다.
-                                    확정되면 바로 다음 단계로 넘어가고, <b>결과를 찾지 못했을 때만</b> 아래에서 직접 입력합니다.
+                                    이름을 저장하고 조회 대기열에 등록합니다. 백그라운드에서 한 제품씩 처리하며,
+                                    다른 화면으로 이동해도 계속 진행됩니다. <b>최종 기능성은 관리자가 저장해야 확정됩니다.</b>
                                 </p>
                             </div>
                         </div>
                         <button type="submit" class="btn-primary">저장하고 자동 조회</button>
                     </form>
+
+                    <div class="form-section" th:if="${screeningJob != null}"
+                         id="screening-job" th:attr="data-status-url=@{'/admin/products/' + ${product.id} + '/functional-screening/status'},data-initial-status=${screeningJob.status}">
+                        <div class="form-section-title">백그라운드 조회 상태</div>
+                        <p id="screening-job-message" aria-live="polite">조회 상태를 확인하고 있습니다…</p>
+                        <button type="button" class="subtle" id="screening-result-refresh" hidden onclick="location.reload()">결과 보기</button>
+                    </div>
 
                     <!-- ── 자동 조회 결과. 확정하지 못한 이유와 후보를 함께 보여 준다 —
                          "왜 자동으로 안 됐나"를 모르면 사람이 같은 검색을 처음부터 다시 한다. ── -->
@@ -266,5 +274,6 @@
     })();
 </script>
 <script th:src="@{/js/admin.js}"></script>
+<script th:src="@{/js/functional-screening-status.js}"></script>
 </body>
 </html>

@@ -49,24 +49,56 @@ class FunctionalWorkflowViewTest {
     @MockitoBean
     FunctionalScreeningService screeningService;
 
+    @MockitoBean
+    com.seoulection.admin.product.functional.application.FunctionalScreeningQueue screeningQueue;
+
+    @org.junit.jupiter.api.BeforeEach
+    void queueStatus() {
+        given(screeningQueue.status("p1")).willReturn(Map.of("status", "NONE", "ahead", 0));
+    }
+
     @Test
     @DisplayName("확정하지 못한 판정은 후보 표와 보류 사유까지 그린다")
     void rendersCandidatesAndBlockReason() throws Exception {
         given(service.getProduct("p1")).willReturn(product());
-        given(screeningService.findOrScreen("p1")).willReturn(Optional.of(screening()));
+        given(screeningService.find("p1")).willReturn(Optional.of(screening()));
 
         mockMvc.perform(get("/admin/products/p1/workflow").param("step", "functional"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("닥터디퍼런트131모이스처라이저")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("확인 필요")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("저장하고 자동 조회")));
+        org.mockito.Mockito.verify(screeningService, org.mockito.Mockito.never()).findOrScreen("p1");
+    }
+
+    @Test
+    void nameSaveOnlyEnqueuesAndReturnsImmediately() throws Exception {
+        given(service.getProduct("p1")).willReturn(product());
+        given(screeningQueue.enqueue("p1", true)).willReturn("조회 대기열에 등록했습니다.");
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                "/admin/products/p1/workflow/functional-screening").accept("text/html").param("nameKo", "311 모이스처라이저"))
+                .andExpect(status().is3xxRedirection());
+        org.mockito.Mockito.verify(screeningQueue).enqueue("p1", true);
+        org.mockito.Mockito.verify(screeningService, org.mockito.Mockito.never()).screenAfterNameSaved("p1");
+    }
+
+    @Test
+    void jsonEnqueueReturnsGuidanceWithoutRedirecting() throws Exception {
+        given(service.getProduct("p1")).willReturn(product());
+        given(screeningQueue.enqueue("p1", true)).willReturn("대기열이 가득 찼습니다. 잠시 후 다시 시도해 주세요.");
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                "/admin/products/p1/workflow/functional-screening").param("nameKo", "311 모이스처라이저")
+                .accept(org.springframework.http.MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.accepted").value(false))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message").value("대기열이 가득 찼습니다. 잠시 후 다시 시도해 주세요."));
     }
 
     @Test
     @DisplayName("판정이 없어도 화면은 뜬다 — 한글 이름 입력 칸만 보인다")
     void rendersWithoutScreening() throws Exception {
         given(service.getProduct("p1")).willReturn(product());
-        given(screeningService.findOrScreen("p1")).willReturn(Optional.empty());
+        given(screeningService.find("p1")).willReturn(Optional.empty());
 
         mockMvc.perform(get("/admin/products/p1/workflow").param("step", "functional"))
                 .andExpect(status().isOk())
