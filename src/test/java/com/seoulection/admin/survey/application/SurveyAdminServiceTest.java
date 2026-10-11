@@ -3,7 +3,9 @@ package com.seoulection.admin.survey.application;
 import com.seoulection.admin.TestcontainersConfiguration;
 import com.seoulection.admin.survey.application.dto.SurveyOptionResult;
 import com.seoulection.admin.survey.application.dto.SurveyQuestionResult;
+import com.seoulection.admin.survey.application.dto.SurveyFeatureResult;
 import com.seoulection.admin.survey.application.service.SurveyAdminService;
+import com.seoulection.admin.survey.domain.entity.SurveyQuestionRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,9 +39,17 @@ class SurveyAdminServiceTest {
     void setUp() {
         jdbcTemplate.update("delete from survey_option");
         jdbcTemplate.update("delete from survey_question");
+        jdbcTemplate.update("delete from skin_score_policy");
+        // weight·role 은 넣지 않는다 — 운영(V30)과 같은 DB 기본값(100, SCORE)이 들어가는지도 함께 확인된다.
         jdbcTemplate.update("""
                 insert into survey_question (question_key, title, sort_order, active)
                 values ('AVOIDANCE', '회피 항목', 1, true), ('CONCERN', '피부 고민', 2, true)""");
+        // 지표 마스터. 문항의 feature_key 는 이 중 하나여야 한다.
+        jdbcTemplate.update("""
+                insert into skin_score_policy (feature_key, label, survey_reliability, photo_reliability,
+                    inconsistent_survey_factor, bad_boundary, good_boundary, policy_version, min_answered_weight)
+                values ('water_score', 'Hydration', 1, 0, 0.7, 0.33, 1, 'v1', 0.5),
+                       ('acne_score', 'Acne', 0, 1, 0.7, 0.3, 0.7, 'v1', 0.5)""");
     }
 
     private List<SurveyOptionResult> avoidanceOptions() {
@@ -65,6 +75,99 @@ class SurveyAdminServiceTest {
         assertThatThrownBy(() -> service.createQuestion("AVOIDANCE", "다른 문구", 9))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("이미 있는 문항");
+    }
+
+    @Test
+    @DisplayName("지표 없이 만든 문항은 FLAG · 비중 100 — 기존 호출부와 DB 기본값이 같다")
+    void createQuestion_withoutFeature_isFlag() {
+        service.createQuestion("NEW_FLAG", "표시용 문항", 3);
+
+        SurveyQuestionResult saved = questionByKey("NEW_FLAG");
+        assertThat(saved.featureKey()).isNull();
+        assertThat(saved.weight()).isEqualTo(100);
+        assertThat(saved.role()).isEqualTo(SurveyQuestionRole.FLAG);
+        assertThat(saved.scoresFeature()).isFalse();
+        // 시드로 넣은(컬럼 생략) 행은 DB 기본값 SCORE 로 읽힌다.
+        assertThat(questionByKey("CONCERN").role()).isEqualTo(SurveyQuestionRole.SCORE);
+    }
+
+    @Test
+    @DisplayName("★ 지표를 골라 만든 문항은 지표·비중·역할이 저장되고 지표 라벨이 함께 나온다 — 코드 수정 없이 추천 계산에 들어가는 길")
+    void createQuestion_withFeature_savesMapping() {
+        service.createQuestion("WATER_SITUATIONAL", "지난 7일 건조해 보인 날", 4, "water_score", 50,
+                SurveyQuestionRole.SCORE);
+
+        SurveyQuestionResult saved = questionByKey("WATER_SITUATIONAL");
+        assertThat(saved.featureKey()).isEqualTo("water_score");
+        assertThat(saved.featureLabel()).isEqualTo("Hydration");
+        assertThat(saved.weight()).isEqualTo(50);
+        assertThat(saved.role()).isEqualTo(SurveyQuestionRole.SCORE);
+        assertThat(saved.scoresFeature()).isTrue();
+    }
+
+    @Test
+    @DisplayName("정책에 없는 지표 키는 거부된다 — 드롭다운 밖의 값(오타·대소문자)이 들어오는 길을 막는다")
+    void createQuestion_unknownFeature_rejected() {
+        assertThatThrownBy(() -> service.createQuestion("WATER_X", "문구", 4, "Water", 50, SurveyQuestionRole.SCORE))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("없는 피부 지표");
+        assertThatThrownBy(() -> service.createQuestion("WATER_Y", "문구", 4, "water_score", 150, SurveyQuestionRole.SCORE))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("비중");
+    }
+
+    @Test
+    @DisplayName("매핑 수정은 지표·비중·역할만 바꾸고 문구·순서·노출은 그대로다")
+    void updateQuestionMapping_changesOnlyMapping() {
+        service.createQuestion("ACNE_NODULE", "결절이 있나요?", 5, "acne_score", 100, SurveyQuestionRole.SCORE);
+
+        service.updateQuestionMapping("ACNE_NODULE", "acne_score", 0, SurveyQuestionRole.FLAG);
+
+        SurveyQuestionResult updated = questionByKey("ACNE_NODULE");
+        assertThat(updated.title()).isEqualTo("결절이 있나요?");
+        assertThat(updated.active()).isTrue();
+        assertThat(updated.weight()).isZero();
+        assertThat(updated.role()).isEqualTo(SurveyQuestionRole.FLAG);
+        assertThat(updated.scoresFeature()).isFalse();
+
+        // 빈 문자열(폼의 "지표 없음")은 null 로 저장된다.
+        service.updateQuestionMapping("ACNE_NODULE", "", 100, SurveyQuestionRole.FLAG);
+        assertThat(questionByKey("ACNE_NODULE").featureKey()).isNull();
+    }
+
+    @Test
+    @DisplayName("★ 문구 수정·숨김은 매핑을 건드리지 않는다 — upsert 가 지표·비중을 기본값으로 되돌리면 추천 계산이 조용히 바뀐다")
+    void updateQuestionTitle_keepsMapping() {
+        service.createQuestion("WATER_DIRECT", "평소 건조한 정도", 3, "water_score", 50, SurveyQuestionRole.SCORE);
+
+        service.updateQuestionTitle("WATER_DIRECT", "바뀐 문구");
+        service.changeQuestionActive("WATER_DIRECT", false);
+
+        SurveyQuestionResult after = questionByKey("WATER_DIRECT");
+        assertThat(after.title()).isEqualTo("바뀐 문구");
+        assertThat(after.active()).isFalse();
+        assertThat(after.featureKey()).isEqualTo("water_score");
+        assertThat(after.weight()).isEqualTo(50);
+        assertThat(after.role()).isEqualTo(SurveyQuestionRole.SCORE);
+    }
+
+    @Test
+    @DisplayName("지표별 비중 합은 활성 · SCORE 문항만 더한다 — 숨긴 문항과 MODIFIER 는 빠진다")
+    void getFeatures_sumsActiveScoreWeights() {
+        service.createQuestion("WATER_DIRECT", "a", 3, "water_score", 50, SurveyQuestionRole.SCORE);
+        service.createQuestion("WATER_SITUATIONAL", "b", 4, "water_score", 50, SurveyQuestionRole.SCORE);
+        service.createQuestion("WATER_OLD", "c", 5, "water_score", 100, SurveyQuestionRole.SCORE);
+        service.changeQuestionActive("WATER_OLD", false);
+        service.createQuestion("WATER_RETURN", "d", 6, "water_score", 100, SurveyQuestionRole.MODIFIER);
+
+        List<SurveyFeatureResult> features = service.getFeatures();
+
+        assertThat(features).extracting(SurveyFeatureResult::featureKey).containsExactly("acne_score", "water_score");
+        SurveyFeatureResult water = features.get(1);
+        assertThat(water.label()).isEqualTo("Hydration");
+        assertThat(water.scoreWeightSum()).isEqualTo(100);
+        assertThat(water.minAnsweredWeight()).isEqualTo(0.5);
+        assertThat(features.get(0).scoreWeightSum()).isZero();
     }
 
     @Test
@@ -128,6 +231,35 @@ class SurveyAdminServiceTest {
 
         service.updateOption(saved.id(), saved.label(), 100, saved.sortOrder(), saved.exclusive());
         assertThat(avoidanceOptions().get(0).value()).isEqualTo(100);
+    }
+
+    @Test
+    @DisplayName("선택지의 지표 상한·진료 안내가 저장·수정된다 (결절 '예' → 여드름 ≤ 25 + 진료 안내)")
+    void createOption_withCapAndReferral_roundTrips() {
+        service.createOption("CONCERN", "NODULE_YES", "있어요", null, 1, false, 25, true);
+
+        SurveyOptionResult saved = service.getQuestions().stream()
+                .filter(q -> q.key().equals("CONCERN")).findFirst().orElseThrow().options().get(0);
+        assertThat(saved.value()).isNull();
+        assertThat(saved.capsFeatureAt()).isEqualTo(25);
+        assertThat(saved.referDermatologist()).isTrue();
+
+        // 옛 시그니처 수정은 상한·진료 안내를 보존한다.
+        service.updateOption(saved.id(), "있어요(수정)", null, 1, false);
+        SurveyOptionResult kept = service.getQuestions().stream()
+                .filter(q -> q.key().equals("CONCERN")).findFirst().orElseThrow().options().get(0);
+        assertThat(kept.capsFeatureAt()).isEqualTo(25);
+        assertThat(kept.referDermatologist()).isTrue();
+
+        service.updateOption(saved.id(), "있어요", null, 1, false, null, false);
+        SurveyOptionResult cleared = service.getQuestions().stream()
+                .filter(q -> q.key().equals("CONCERN")).findFirst().orElseThrow().options().get(0);
+        assertThat(cleared.capsFeatureAt()).isNull();
+        assertThat(cleared.referDermatologist()).isFalse();
+
+        assertThatThrownBy(() -> service.createOption("CONCERN", "NODULE_NO", "없어요", null, 2, false, 101, false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("지표 상한");
     }
 
     @Test

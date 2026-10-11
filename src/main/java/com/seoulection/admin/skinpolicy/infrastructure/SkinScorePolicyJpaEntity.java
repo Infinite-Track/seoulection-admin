@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/** {@code skin_score_policy} — 지표 10개의 마스터. 스키마 주인은 api-server(여기는 {@code ddl-auto=none}). */
 @Entity
 @Table(name = "skin_score_policy")
 public class SkinScorePolicyJpaEntity {
@@ -25,6 +26,9 @@ public class SkinScorePolicyJpaEntity {
     private double goodBoundary;
     @Column(name = "policy_version", nullable = false, length = 32)
     private String policyVersion;
+    /** api-server V30. 기본값은 테스트 스키마(이 매핑으로 생성)와 운영이 같게. */
+    @Column(name = "min_answered_weight", nullable = false, columnDefinition = "float(53) default 0.5")
+    private double minAnsweredWeight;
 
     protected SkinScorePolicyJpaEntity() {}
 
@@ -37,6 +41,7 @@ public class SkinScorePolicyJpaEntity {
         this.badBoundary = policy.badBoundary();
         this.goodBoundary = policy.goodBoundary();
         this.policyVersion = policy.policyVersion();
+        this.minAnsweredWeight = policy.minAnsweredWeight();
     }
 
     public static SkinScorePolicyJpaEntity from(SkinScorePolicy policy) {
@@ -45,6 +50,6 @@ public class SkinScorePolicyJpaEntity {
 
     public SkinScorePolicy toDomain() {
         return new SkinScorePolicy(featureKey, label, surveyReliability, photoReliability,
-                inconsistentSurveyFactor, badBoundary, goodBoundary, policyVersion);
+                inconsistentSurveyFactor, badBoundary, goodBoundary, policyVersion, minAnsweredWeight);
     }
 }

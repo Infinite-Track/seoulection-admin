@@ -1324,3 +1324,12 @@ td a:hover { text-decoration: underline; }
 .screening-switch input:checked + .screening-switch-track { background: #486575; }
 .screening-switch input:checked + .screening-switch-track::after { transform: translateX(18px); }
 .screening-switch input:focus-visible + .screening-switch-track { outline: 2px solid #486575; outline-offset: 3px; }
+
+/* 설문 관리 — 지표 매핑 폼과 지표별 비중 요약 */
+.mapping-form { padding: 10px 20px; border-bottom: 1px solid var(--border, #e5e7eb); }
+.mapping-form select { max-width: 260px; }
+.mapping-form .inline-field { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+.mapping-form .inline-field input { width: 72px; }
+.feature-summary { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 16px; }
+.feature-summary .data-chip { font-size: 12px; }
+.feature-summary code { font-size: 11px; opacity: .8; }

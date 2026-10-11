@@ -10,11 +10,13 @@ public record SurveyOptionResult(
         Integer value,
         int sortOrder,
         boolean exclusive,
-        boolean active
+        boolean active,
+        Integer capsFeatureAt,
+        boolean referDermatologist
 ) {
 
     public static SurveyOptionResult from(SurveyOption o) {
         return new SurveyOptionResult(o.getId(), o.getCode(), o.getLabel(), o.getValue(), o.getSortOrder(),
-                o.isExclusive(), o.isActive());
+                o.isExclusive(), o.isActive(), o.getCapsFeatureAt(), o.isReferDermatologist());
     }
 }

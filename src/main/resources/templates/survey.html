@@ -25,16 +25,34 @@
         </header>
         <main class="content">
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
             <p class="alert alert-notice">
                 <strong>문항 키(questionKey)·선택지 코드(code)는 만든 뒤 바꿀 수 없습니다.</strong>
                 이미 제출된 사용자 응답이 이 문자열을 그대로 참조하고 있어, 바꾸면 과거 응답이 가리키는 대상이 사라집니다.
                 선택지의 <strong>삭제는 '숨김'으로 동작</strong>합니다 — 신규 설문에서만 사라지고 기존 응답은 보존됩니다.
+                <br>
+                <strong>지표 매핑</strong>(어느 피부 지표에 · 몇 %로 · 어떤 역할로)은 문항 카드에서 바꿀 수 있고, 저장 즉시 다음 추천 계산부터
+                반영됩니다. 질문의 뜻이나 척도가 바뀌면 같은 키의 문구를 고치지 말고 <strong>새 키로 만들고 옛 문항을 숨기세요</strong> —
+                옛 답이 새 뜻으로 읽히는 걸 막기 위해서입니다.
             </p>
 
-
-
-
+            <!-- 지표별 비중 요약 — 관리자가 "이 지표에 문항이 몇 개, 비중 합이 얼마"를 한눈에 보게. -->
+            <section class="card is-flush" th:if="${!features.isEmpty()}">
+                <div class="panel-header">
+                    <div>
+                        <h2>지표별 비중 합<span class="count-inline" th:text="${features.size()}"></span></h2>
+                        <p class="card-subtitle">활성 문항 중 역할이 SCORE인 것만 더합니다. 합이 100이 아니어도 계산은 되지만(답한 비중으로 나눔), 의도와 다르면 아래 문항 카드에서 고치세요. 최소 답변 비중은 <a class="text-link" th:href="@{/admin/skin-score-policy}">피부 점수 정책</a>에서 바꿉니다.</p>
+                    </div>
+                </div>
+                <div class="feature-summary">
+                    <span class="data-chip" th:each="feature : ${features}"
+                          th:classappend="${feature.scoreWeightSum == 0} ? ' is-neutral' : (${feature.scoreWeightSum == 100} ? ' is-core' : '')"
+                          th:title="${'최소 답변 비중 ' + feature.minAnsweredWeight}">
+                        <span th:text="${feature.label}"></span>&nbsp;<code th:text="${feature.featureKey}"></code>&nbsp;·&nbsp;<strong th:text="${feature.scoreWeightSum + '%'}"></strong>
+                    </span>
+                </div>
+            </section>
 
             <section class="card is-flush" th:each="question : ${questions}" th:classappend="${question.active} ? '' : ' is-inactive'">
                 <div class="panel-header">
@@ -53,6 +71,27 @@
                         </form>
                     </div>
                 </div>
+
+                <!--
+                  지표 매핑(api-server V30) — 이 문항의 답이 어느 지표에 몇 %로 들어가는가.
+                  지표는 skin_score_policy 의 행만 고를 수 있다(FK). 비우면 점수에 쓰이지 않는다.
+                -->
+                <form class="option-form mapping-form" th:action="@{'/admin/survey/questions/' + ${question.key} + '/mapping'}" method="post">
+                    <span class="data-chip" th:if="${question.scoresFeature()}" th:text="${'점수 → ' + (question.featureLabel ?: question.featureKey)}"></span>
+                    <span class="data-chip is-neutral" th:if="${question.featureKey == null}">점수에 안 쓰임</span>
+                    <span class="data-chip is-support" th:if="${question.featureKey != null and !question.scoresFeature()}" th:text="${question.role.label + ' · ' + (question.featureLabel ?: question.featureKey)}"></span>
+                    <select name="featureKey" aria-label="피부 지표">
+                        <option value="" th:selected="${question.featureKey == null}">지표 없음</option>
+                        <option th:each="feature : ${features}" th:value="${feature.featureKey}"
+                                th:text="${feature.label + ' (' + feature.featureKey + ')'}"
+                                th:selected="${feature.featureKey == question.featureKey}"></option>
+                    </select>
+                    <label class="inline-field">비중 <input type="number" name="weight" th:value="${question.weight}" min="0" max="100" required aria-label="비중(%)">%</label>
+                    <select name="role" aria-label="역할">
+                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r + ' · ' + r.label}" th:selected="${r == question.role}"></option>
+                    </select>
+                    <button class="subtle" type="submit">매핑 저장</button>
+                </form>
 
                 <!--
                   문항 근거 — 한 줄로 접어 둔다. 펼쳐야 편집 칸이 나온다.
@@ -112,6 +151,11 @@
                                     <label class="toggle-option">
                                         <input type="checkbox" name="exclusive" value="true" th:checked="${option.exclusive}">
                                         <span>단독</span>
+                                    </label>
+                                    <input type="number" name="capsFeatureAt" th:value="${option.capsFeatureAt}" min="0" max="100" placeholder="지표 상한" aria-label="지표 상한" title="이 선택지를 고르면 지표 점수를 이 값 이하로 누릅니다(예: 결절 '예' → 25)">
+                                    <label class="toggle-option" title="이 선택지를 고르면 결과 화면에 피부과 진료 안내를 띄웁니다">
+                                        <input type="checkbox" name="referDermatologist" value="true" th:checked="${option.referDermatologist}">
+                                        <span>진료 안내</span>
                                     </label>
                                     <button class="subtle" type="submit">저장</button>
                                 </form>
@@ -174,6 +218,34 @@
                     </div>
                 </div>
             </div>
+            <div class="form-section">
+                <div class="form-section-title">추천 계산 연결</div>
+                <p class="error" th:if="${#fields.hasGlobalErrors()}" th:errors="*{global}"></p>
+                <div class="form-grid">
+                    <div>
+                        <label for="questionFeatureKey">피부 지표</label>
+                        <select id="questionFeatureKey" th:field="*{featureKey}">
+                            <option value="">지표 없음 (점수에 안 쓰임)</option>
+                            <option th:each="feature : ${features}" th:value="${feature.featureKey}"
+                                    th:text="${feature.label + ' (' + feature.featureKey + ') · 현재 합 ' + feature.scoreWeightSum + '%'}"></option>
+                        </select>
+                        <p class="form-help">자유 입력이 아닙니다 — 피부 점수 정책의 지표만 고를 수 있습니다.</p>
+                    </div>
+                    <div>
+                        <label for="questionWeight">비중(%)</label>
+                        <input type="number" id="questionWeight" th:field="*{weight}" min="0" max="100">
+                        <p class="error" th:if="${#fields.hasErrors('weight')}" th:errors="*{weight}"></p>
+                        <p class="form-help">같은 지표 문항끼리의 상대 비중. 두 문항이면 50·50.</p>
+                    </div>
+                    <div>
+                        <label for="questionRole">역할</label>
+                        <select id="questionRole" th:field="*{role}">
+                            <option th:each="r : ${roles}" th:value="${r}" th:text="${r + ' · ' + r.label}"></option>
+                        </select>
+                        <p class="form-help">SCORE = 산식에 포함, MODIFIER = 보조값만 저장, FLAG = 점수 없음.</p>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="form-footer">
             <button type="button" class="button-secondary" data-panel-toggle="questionPanel">취소</button>
@@ -232,6 +304,26 @@
                             <label class="toggle-option">
                                 <input type="checkbox" th:field="*{exclusive}">
                                 <span>다른 항목과 함께 못 고름</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <div class="form-section-title">추천 계산 규칙<span class="optional-mark">선택</span></div>
+                <div class="form-grid cols-2">
+                    <div>
+                        <label for="capsFeatureAt">지표 상한(0~100)</label>
+                        <input type="number" id="capsFeatureAt" th:field="*{capsFeatureAt}" min="0" max="100" placeholder="비워두면 없음">
+                        <p class="error" th:if="${#fields.hasErrors('capsFeatureAt')}" th:errors="*{capsFeatureAt}"></p>
+                        <p class="form-help">이 선택지를 고르면 문항이 묶인 지표 점수를 이 값 이하로 누릅니다. 예: 결절 "예" → 여드름 25.</p>
+                    </div>
+                    <div>
+                        <span class="field-label">피부과 진료 안내</span>
+                        <div class="toggle-group">
+                            <label class="toggle-option">
+                                <input type="checkbox" th:field="*{referDermatologist}">
+                                <span>고르면 결과 화면에 진료 안내</span>
                             </label>
                         </div>
                     </div>

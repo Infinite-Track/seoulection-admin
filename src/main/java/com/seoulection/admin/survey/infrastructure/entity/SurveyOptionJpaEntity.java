@@ -48,11 +48,20 @@ public class SurveyOptionJpaEntity {
     @Column(nullable = false)
     private boolean active;
 
+    /** 이 선택지를 고르면 문항의 지표 점수에 거는 상한(0~100). 없으면 null. V30. */
+    @Column(name = "caps_feature_at")
+    private Integer capsFeatureAt;
+
+    /** 이 선택지를 고르면 결과 화면에 피부과 진료 안내. V30. */
+    @Column(name = "refer_dermatologist", nullable = false, columnDefinition = "boolean default false")
+    private boolean referDermatologist;
+
     protected SurveyOptionJpaEntity() {
     }
 
     private SurveyOptionJpaEntity(Long id, String questionKey, String code, String label, Integer value,
-                                  int sortOrder, boolean exclusive, boolean active) {
+                                  int sortOrder, boolean exclusive, boolean active,
+                                  Integer capsFeatureAt, boolean referDermatologist) {
         this.id = id;
         this.questionKey = questionKey;
         this.code = code;
@@ -61,15 +70,18 @@ public class SurveyOptionJpaEntity {
         this.sortOrder = sortOrder;
         this.exclusive = exclusive;
         this.active = active;
+        this.capsFeatureAt = capsFeatureAt;
+        this.referDermatologist = referDermatologist;
     }
 
     public static SurveyOptionJpaEntity fromDomain(SurveyOption option) {
         return new SurveyOptionJpaEntity(option.getId(), option.getQuestionKey(), option.getCode(),
                 option.getLabel(), option.getValue(), option.getSortOrder(), option.isExclusive(),
-                option.isActive());
+                option.isActive(), option.getCapsFeatureAt(), option.isReferDermatologist());
     }
 
     public SurveyOption toDomain() {
-        return SurveyOption.of(id, questionKey, code, label, value, sortOrder, exclusive, active);
+        return SurveyOption.of(id, questionKey, code, label, value, sortOrder, exclusive, active,
+                capsFeatureAt, referDermatologist);
     }
 }
