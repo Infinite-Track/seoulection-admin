@@ -39,6 +39,13 @@ public class SurveyOptionCreateRequest {
 
     private boolean exclusive;
 
+    /** 이 선택지를 고르면 문항이 묶인 지표 점수에 거는 상한. 비우면 없음. */
+    @Min(value = 0, message = "지표 상한은 0 이상이어야 합니다.")
+    @Max(value = 100, message = "지표 상한은 100 이하여야 합니다.")
+    private Integer capsFeatureAt;
+
+    private boolean referDermatologist;
+
     public String getQuestionKey() {
         return questionKey;
     }
@@ -85,5 +92,21 @@ public class SurveyOptionCreateRequest {
 
     public void setExclusive(boolean exclusive) {
         this.exclusive = exclusive;
+    }
+
+    public Integer getCapsFeatureAt() {
+        return capsFeatureAt;
+    }
+
+    public void setCapsFeatureAt(Integer capsFeatureAt) {
+        this.capsFeatureAt = capsFeatureAt;
+    }
+
+    public boolean isReferDermatologist() {
+        return referDermatologist;
+    }
+
+    public void setReferDermatologist(boolean referDermatologist) {
+        this.referDermatologist = referDermatologist;
     }
 }

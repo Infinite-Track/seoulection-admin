@@ -37,6 +37,24 @@ class SkinScorePolicyServiceTest {
     }
 
     @Test
+    void updateStoresMinAnsweredWeight() {
+        var current = new SkinScorePolicy("sensitivity_score", "Sensitivity", 1.0, 0.0, 0.7, 0.33, 1.0, "v1", 0.5);
+        given(repository.findById("sensitivity_score")).willReturn(
+                Optional.of(SkinScorePolicyJpaEntity.from(current)));
+
+        // 민감 5문항(각 20%) → 4문항 이상 답해야 계산
+        service.update("sensitivity_score", 0.33, 1.0, "v2", 0.8);
+
+        var captor = ArgumentCaptor.forClass(SkinScorePolicyJpaEntity.class);
+        then(repository).should().save(captor.capture());
+        assertThat(captor.getValue().toDomain().minAnsweredWeight()).isEqualTo(0.8);
+
+        assertThatThrownBy(() -> service.update("sensitivity_score", 0.33, 1.0, "v2", 1.5))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("최소 답변 비중");
+    }
+
+    @Test
     void updateRejectsBoundaryOutsideZeroToOne() {
         var current = new SkinScorePolicy("water_score", "Hydration", 0.8, 0.2, 0.7, 0.398, 0.696, "v1");
         given(repository.findById("water_score")).willReturn(

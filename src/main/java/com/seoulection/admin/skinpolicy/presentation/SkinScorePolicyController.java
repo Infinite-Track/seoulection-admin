@@ -1,6 +1,7 @@
 package com.seoulection.admin.skinpolicy.presentation;
 
 import com.seoulection.admin.skinpolicy.application.SkinScorePolicyService;
+import com.seoulection.admin.skinpolicy.domain.SkinScorePolicy;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,9 +29,12 @@ public class SkinScorePolicyController {
                          @RequestParam double badBoundary,
                          @RequestParam double goodBoundary,
                          @RequestParam String policyVersion,
+                         @RequestParam(required = false) Double minAnsweredWeight,
                          RedirectAttributes redirectAttributes) {
         try {
-            service.update(featureKey, badBoundary, goodBoundary, policyVersion);
+            double minAnswered = minAnsweredWeight == null
+                    ? SkinScorePolicy.DEFAULT_MIN_ANSWERED_WEIGHT : minAnsweredWeight;
+            service.update(featureKey, badBoundary, goodBoundary, policyVersion, minAnswered);
             redirectAttributes.addFlashAttribute("successMessage", featureKey + " 정책을 저장했습니다.");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());

@@ -1,6 +1,8 @@
 package com.seoulection.admin.survey.presentation.controller;
 
 import com.seoulection.admin.survey.application.service.SurveyAdminService;
+import com.seoulection.admin.survey.application.service.SurveyEvidenceService;
+import com.seoulection.admin.survey.domain.entity.SurveyQuestionRole;
 import com.seoulection.admin.survey.presentation.dto.SurveyOptionCreateRequest;
 import com.seoulection.admin.survey.presentation.dto.SurveyQuestionCreateRequest;
 import jakarta.validation.Valid;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 /**
  * 설문 문항·선택지 관리 화면.
  *
@@ -23,11 +27,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 public class SurveyAdminController {
 
-    private final com.seoulection.admin.survey.application.service.SurveyEvidenceService evidenceService;
+    private final SurveyEvidenceService evidenceService;
 
     private final SurveyAdminService service;
 
-    public SurveyAdminController(SurveyAdminService service, com.seoulection.admin.survey.application.service.SurveyEvidenceService evidenceService) {
+    public SurveyAdminController(SurveyAdminService service, SurveyEvidenceService evidenceService) {
         this.evidenceService = evidenceService;
         this.service = service;
     }
@@ -46,7 +50,8 @@ public class SurveyAdminController {
 
     /**
      * 문항 추가. api-server가 문항 집합을 코드에 고정하지 않으므로 여기서 자유롭게 늘릴 수 있다 —
-     * 단 {@code questionKey}는 자연 PK라 중복이면 거부한다(서비스 주석 참조).
+     * 단 {@code questionKey}는 자연 PK라 중복이면 거부한다(서비스 주석 참조). 지표를 함께 고르면
+     * 그 순간부터 추천 계산에 들어간다.
      */
     @PostMapping("/admin/survey/questions")
     public String createQuestion(@Valid @ModelAttribute("questionRequest") SurveyQuestionCreateRequest request,
@@ -61,9 +66,15 @@ public class SurveyAdminController {
         }
 
         try {
-            service.createQuestion(request.getQuestionKey(), request.getTitle(), request.getSortOrder());
+            service.createQuestion(request.getQuestionKey(), request.getTitle(), request.getSortOrder(),
+                    request.getFeatureKey(), request.getWeight(), SurveyQuestionRole.fromNullable(request.getRole()));
         } catch (IllegalArgumentException e) {
-            bindingResult.rejectValue("questionKey", "invalid", e.getMessage());
+            // 중복 키는 키 칸에, 지표·역할 문제는 폼 상단에 — 사용자가 어디를 고쳐야 하는지 보이게.
+            if (e.getMessage() != null && e.getMessage().startsWith("이미 있는 문항")) {
+                bindingResult.rejectValue("questionKey", "invalid", e.getMessage());
+            } else {
+                bindingResult.reject("invalid", e.getMessage());
+            }
             model.addAttribute("request", new SurveyOptionCreateRequest());
             populateSurveyModel(model);
             model.addAttribute("questionFormOpen", true);
@@ -87,7 +98,8 @@ public class SurveyAdminController {
 
         try {
             service.createOption(request.getQuestionKey(), request.getCode(), request.getLabel(),
-                    request.getValue(), request.getSortOrder(), request.isExclusive());
+                    request.getValue(), request.getSortOrder(), request.isExclusive(),
+                    request.getCapsFeatureAt(), request.isReferDermatologist());
         } catch (IllegalArgumentException e) {
             // 코드 중복·형식 위반은 사용자가 고칠 수 있는 입력 오류다 → 폼으로 되돌려 사유를 보여준다.
             bindingResult.rejectValue("code", "invalid", e.getMessage());
@@ -106,9 +118,15 @@ public class SurveyAdminController {
                                @RequestParam(required = false) Integer value,
                                @RequestParam int sortOrder,
                                @RequestParam(defaultValue = "false") boolean exclusive,
+                               @RequestParam(required = false) Integer capsFeatureAt,
+                               @RequestParam(defaultValue = "false") boolean referDermatologist,
                                RedirectAttributes redirectAttributes) {
-        service.updateOption(optionId, label, value, sortOrder, exclusive);
-        redirectAttributes.addFlashAttribute("successMessage", "선택지를 수정했습니다.");
+        try {
+            service.updateOption(optionId, label, value, sortOrder, exclusive, capsFeatureAt, referDermatologist);
+            redirectAttributes.addFlashAttribute("successMessage", "선택지를 수정했습니다.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/admin/survey";
     }
 
@@ -132,6 +150,26 @@ public class SurveyAdminController {
         return "redirect:/admin/survey";
     }
 
+    /**
+     * 지표·비중·역할 수정. 저장 즉시 다음 추천 계산부터 새 비중으로 계산된다 — 이미 제출된 응답도
+     * 다시 읽히므로 기존 사용자의 설문 점수가 바뀐다는 뜻이다.
+     */
+    @PostMapping("/admin/survey/questions/{questionKey}/mapping")
+    public String updateQuestionMapping(@PathVariable String questionKey,
+                                        @RequestParam(required = false) String featureKey,
+                                        @RequestParam int weight,
+                                        @RequestParam(required = false) String role,
+                                        RedirectAttributes redirectAttributes) {
+        try {
+            service.updateQuestionMapping(questionKey, featureKey, weight, SurveyQuestionRole.fromNullable(role));
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "지표 매핑을 저장했습니다. 다음 추천 계산부터 반영됩니다.");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/survey";
+    }
+
     /** 숨김/되살리기. 이것이 문항 삭제다 — 행을 지우지 않는 이유는 서비스 주석 참조. */
     @PostMapping("/admin/survey/questions/{questionKey}/active")
     public String changeQuestionActive(@PathVariable String questionKey,
@@ -139,7 +177,8 @@ public class SurveyAdminController {
                                        RedirectAttributes redirectAttributes) {
         service.changeQuestionActive(questionKey, active);
         redirectAttributes.addFlashAttribute("successMessage",
-                active ? "문항을 다시 노출합니다." : "문항을 숨겼습니다. 기존 응답은 그대로 남습니다.");
+                active ? "문항을 다시 노출합니다."
+                        : "문항을 숨겼습니다. 기존 응답은 남고, 같은 지표의 새 문항에 답하기 전까지는 옛 답으로 계산됩니다.");
         return "redirect:/admin/survey";
     }
 
@@ -202,11 +241,13 @@ public class SurveyAdminController {
      */
     private void populateSurveyModel(Model model) {
         model.addAttribute("questions", service.getQuestions());
+        model.addAttribute("features", service.getFeatures());
+        model.addAttribute("roles", SurveyQuestionRole.values());
         model.addAttribute("evidenceByQuestion", evidenceService.byQuestion());
         model.addAttribute("sourceTypes", SOURCE_TYPES);
     }
 
     /** 마이그레이션의 CHECK 제약과 같은 집합. 화면의 select 가 이걸로 그려진다. */
-    private static final java.util.List<String> SOURCE_TYPES =
-            java.util.List.of("PAPER", "GUIDELINE", "CLINICAL", "ARTICLE", "INTERNAL");
+    private static final List<String> SOURCE_TYPES =
+            List.of("PAPER", "GUIDELINE", "CLINICAL", "ARTICLE", "INTERNAL");
 }
