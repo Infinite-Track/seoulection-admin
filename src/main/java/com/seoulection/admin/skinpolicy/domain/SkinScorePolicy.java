@@ -7,9 +7,18 @@ package com.seoulection.admin.skinpolicy.domain;
 public record SkinScorePolicy(String featureKey, String label, double surveyReliability,
                               double photoReliability, double inconsistentSurveyFactor,
                               double badBoundary, double goodBoundary,
-                              String policyVersion, double minAnsweredWeight) {
+                              String policyVersion, double minAnsweredWeight,
+                              Double surveyBadBoundary, Double surveyGoodBoundary) {
 
     public static final double DEFAULT_MIN_ANSWERED_WEIGHT = 0.5;
+
+    /** 설문 경계 없이(V36 전) 만든다 — 설문 점수도 사진 경계로 판정. */
+    public SkinScorePolicy(String featureKey, String label, double surveyReliability,
+                           double photoReliability, double inconsistentSurveyFactor,
+                           double badBoundary, double goodBoundary, String policyVersion, double minAnsweredWeight) {
+        this(featureKey, label, surveyReliability, photoReliability, inconsistentSurveyFactor,
+                badBoundary, goodBoundary, policyVersion, minAnsweredWeight, null, null);
+    }
 
     public SkinScorePolicy {
         validate(surveyReliability, "설문 신뢰도");
@@ -20,6 +29,11 @@ public record SkinScorePolicy(String featureKey, String label, double surveyReli
         validate(minAnsweredWeight, "최소 답변 비중");
         if (badBoundary > goodBoundary) {
             throw new IllegalArgumentException("Bad 경계는 Good 경계보다 클 수 없습니다.");
+        }
+        if (surveyBadBoundary != null) validate(surveyBadBoundary, "설문 Bad 경계");
+        if (surveyGoodBoundary != null) validate(surveyGoodBoundary, "설문 Good 경계");
+        if (surveyBadBoundary != null && surveyGoodBoundary != null && surveyBadBoundary > surveyGoodBoundary) {
+            throw new IllegalArgumentException("설문 Bad 경계는 설문 Good 경계보다 클 수 없습니다.");
         }
         if (surveyReliability + photoReliability <= 0) {
             throw new IllegalArgumentException("설문·사진 신뢰도가 모두 0일 수 없습니다.");

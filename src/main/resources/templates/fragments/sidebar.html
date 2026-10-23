@@ -65,6 +65,18 @@
             </span>
             <span>피부 점수 정책</span>
         </a>
+        <a class="nav-item" th:classappend="${active == 'skin-analyzer-features'} ? 'is-active' : ''" th:href="@{/admin/skin-analyzer-features}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M8 5l1.5-2h5L16 5"/></svg>
+            </span>
+            <span>분석기 신뢰 지표</span>
+        </a>
+        <a class="nav-item" th:classappend="${active == 'demo-faces'} ? 'is-active' : ''" th:href="@{/admin/demo-faces}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"/></svg>
+            </span>
+            <span>데모 얼굴</span>
+        </a>
         <a class="nav-item" th:classappend="${active == 'trending'} ? 'is-active' : ''" th:href="@{/admin/trending}">
             <span class="nav-icon"><span style="font-size:16px">↗</span></span><span>트렌딩 기준</span>
         </a>
