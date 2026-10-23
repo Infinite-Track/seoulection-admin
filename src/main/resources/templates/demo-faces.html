@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>데모 얼굴 | MySeoulection Admin</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/sidebar :: nav(active='demo-faces')}"></aside>
+    <div class="shell-main">
+        <header class="topbar">
+            <div>
+                <h1>데모 얼굴</h1>
+                <p class="description">/start 첫 화면에서 사진을 찍기 전에 고르는 "비슷한 상태의 얼굴"과, 얼굴마다의 지표 예시 점수를 관리합니다.</p>
+            </div>
+            <div class="topbar-actions">
+                <button type="button" class="btn-primary" data-panel-toggle="facePanel" aria-expanded="false" aria-controls="facePanel">
+                    <span class="btn-icon" aria-hidden="true">＋</span>얼굴 추가
+                </button>
+            </div>
+        </header>
+        <main class="content">
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <p class="alert alert-notice">
+                점수는 0~1이고 <strong>높을수록 좋은 상태</strong>입니다(설문·사진 점수와 같은 축). 그 얼굴의 고민 지표를 낮게(예: 0.2), 나머지를 0.75로 두면
+                데모 추천이 그 고민에 맞는 제품을 냅니다. 여러 얼굴을 같이 고르면 지표마다 <strong>가장 낮은 점수</strong>를 씁니다.
+                이 점수는 분석 결과가 아니라 운영 예시값이고, 사용자 화면에는 "AI 예시 얼굴 기반 체험용 추천"이라고 표시됩니다. 저장 즉시 반영됩니다.
+            </p>
+
+            <section class="card is-flush" th:each="profile : ${profiles}" th:classappend="${profile.active} ? '' : ' is-inactive'">
+                <form class="demo-face-form" th:action="@{'/admin/demo-faces/' + ${profile.code}}" method="post">
+                    <div class="panel-header">
+                        <div class="demo-face-head">
+                            <!-- eslint 없음: 서버 템플릿. 이미지는 웹 정적 경로라 어드민에서는 안 보일 수 있다 -->
+                            <span class="badge badge-accent" th:text="${profile.code}"></span>
+                            <input type="text" name="label" th:value="${profile.label}" required aria-label="이름">
+                            <input type="text" name="imageUrl" th:value="${profile.imageUrl}" required aria-label="이미지 URL" placeholder="/demo-faces/xxx.jpg">
+                            <label class="inline-field">순서 <input type="number" name="sortOrder" th:value="${profile.sortOrder}" min="0" aria-label="노출 순서"></label>
+                            <label class="toggle-option">
+                                <input type="checkbox" name="active" value="true" th:checked="${profile.active}">
+                                <span>노출</span>
+                            </label>
+                        </div>
+                        <div class="panel-header-actions">
+                            <span class="badge badge-success" th:if="${profile.active}">노출</span>
+                            <span class="badge badge-neutral" th:unless="${profile.active}">숨김</span>
+                            <button class="subtle" type="submit">저장</button>
+                        </div>
+                    </div>
+                    <div class="demo-face-scores">
+                        <label class="demo-face-score" th:each="feature : ${features}">
+                            <span th:text="${feature.label}"></span>
+                            <input type="number" th:name="${'score[' + feature.featureKey + ']'}"
+                                   th:value="${#numbers.formatDecimal(profile.scoreOf(feature.featureKey), 1, 2)}"
+                                   min="0" max="1" step="0.05" required th:attr="aria-label=${feature.featureKey}">
+                        </label>
+                    </div>
+                </form>
+            </section>
+            <div class="empty" th:if="${profiles.isEmpty()}"><span>등록된 데모 얼굴이 없습니다.</span></div>
+        </main>
+    </div>
+</div>
+
+<div class="drawer-scrim" data-drawer-scrim></div>
+
+<aside class="drawer" id="facePanel" role="dialog" aria-modal="true" aria-labelledby="facePanelTitle">
+    <div class="drawer-header">
+        <div>
+            <h2 id="facePanelTitle">얼굴 추가</h2>
+            <p class="card-subtitle">코드는 만든 뒤 바꿀 수 없습니다. 점수는 전부 0.75로 시작하고 카드에서 고칩니다.</p>
+        </div>
+        <button type="button" class="btn-ghost" data-panel-toggle="facePanel" aria-label="닫기">닫기</button>
+    </div>
+    <form th:action="@{/admin/demo-faces}" method="post">
+        <div class="drawer-body">
+            <div class="form-section">
+                <div class="form-grid cols-2">
+                    <div>
+                        <label for="faceCode">코드</label>
+                        <input type="text" id="faceCode" name="code" placeholder="DEMO_REDNESS" required autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="faceSortOrder">노출 순서</label>
+                        <input type="number" id="faceSortOrder" name="sortOrder" value="0" min="0">
+                    </div>
+                    <div>
+                        <label for="faceLabel">이름(영문, 사용자에게 보임)</label>
+                        <input type="text" id="faceLabel" name="label" placeholder="Redness" required autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="faceImageUrl">이미지 URL</label>
+                        <input type="text" id="faceImageUrl" name="imageUrl" placeholder="/demo-faces/redness.jpg" required>
+                        <p class="form-help">웹 정적 경로(seoulection-web/public/demo-faces/)에 파일을 먼저 올립니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-footer">
+            <button type="button" class="button-secondary" data-panel-toggle="facePanel">취소</button>
+            <button type="submit" class="btn-primary">얼굴 추가</button>
+        </div>
+    </form>
+</aside>
+<script th:src="@{/js/admin.js}"></script>
+</body>
+</html>

@@ -39,7 +39,9 @@ Thymeleaf 기반 관리자 서버입니다. YouTube 채널 링크와 영상 링�
   응답도 다시 읽어 계산하므로 기존 사용자의 설문 점수가 바뀝니다.
 - **분석기별 사진 신뢰 지표는 "분석기 신뢰 지표" 화면** — `skin_analyzer_feature`(api-server V35). 서버는 켜진 분석기
   이름의 행만 읽어 사진 리포트 필터와 문항 조회의 `photoCovered`에 쓴다. 전부 해제하면 코드 고정 목록으로 돌아간다.
-- ⚠️ **배포 순서: api-server(V30·V35) → admin.** 어드민이 먼저 새 컬럼·테이블을 쓰면 쿼리 시점에 터집니다.
+- **데모 얼굴은 "데모 얼굴" 화면** — `demo_face_profile`·`demo_face_profile_score`(api-server V37). /start 첫 화면의
+  얼굴 카드와 얼굴별 지표 예시 점수(0~1, 높을수록 좋음). 이미지는 웹 정적 경로(`seoulection-web/public/demo-faces/`).
+- ⚠️ **배포 순서: api-server(V30·V35·V36·V37) → admin.** 어드민이 먼저 새 컬럼·테이블을 쓰면 쿼리 시점에 터집니다.
 
 ## 로컬 실행
 
