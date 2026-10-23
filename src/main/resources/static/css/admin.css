@@ -1333,3 +1333,11 @@ td a:hover { text-decoration: underline; }
 .feature-summary { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px 16px; }
 .feature-summary .data-chip { font-size: 12px; }
 .feature-summary code { font-size: 11px; opacity: .8; }
+
+/* 피부 점수 정책 — 설문 피부타입 계산 규칙 */
+.skin-type-rule-form { padding: 16px 20px 4px; }
+.skin-type-rule-form .form-footer { padding: 12px 0 8px; }
+.skin-type-rule-help { padding: 0 20px 16px; font-size: 13px; color: var(--text-secondary); }
+.skin-type-rule-help code { font-size: 12px; }
+.skin-type-rule-table { margin: 4px 0 10px; }
+.skin-type-rule-table th { white-space: nowrap; }
