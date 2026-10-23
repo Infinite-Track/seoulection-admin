@@ -29,6 +29,11 @@ public class SkinScorePolicyJpaEntity {
     /** api-server V30. 기본값은 테스트 스키마(이 매핑으로 생성)와 운영이 같게. */
     @Column(name = "min_answered_weight", nullable = false, columnDefinition = "float(53) default 0.5")
     private double minAnsweredWeight;
+    /** 설문 점수용 경계(api-server V36). null 이면 사진 경계를 쓴다. */
+    @Column(name = "survey_bad_boundary")
+    private Double surveyBadBoundary;
+    @Column(name = "survey_good_boundary")
+    private Double surveyGoodBoundary;
 
     protected SkinScorePolicyJpaEntity() {}
 
@@ -42,6 +47,8 @@ public class SkinScorePolicyJpaEntity {
         this.goodBoundary = policy.goodBoundary();
         this.policyVersion = policy.policyVersion();
         this.minAnsweredWeight = policy.minAnsweredWeight();
+        this.surveyBadBoundary = policy.surveyBadBoundary();
+        this.surveyGoodBoundary = policy.surveyGoodBoundary();
     }
 
     public static SkinScorePolicyJpaEntity from(SkinScorePolicy policy) {
@@ -50,6 +57,7 @@ public class SkinScorePolicyJpaEntity {
 
     public SkinScorePolicy toDomain() {
         return new SkinScorePolicy(featureKey, label, surveyReliability, photoReliability,
-                inconsistentSurveyFactor, badBoundary, goodBoundary, policyVersion, minAnsweredWeight);
+                inconsistentSurveyFactor, badBoundary, goodBoundary, policyVersion, minAnsweredWeight,
+                surveyBadBoundary, surveyGoodBoundary);
     }
 }

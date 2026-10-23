@@ -30,11 +30,14 @@ public class SkinScorePolicyController {
                          @RequestParam double goodBoundary,
                          @RequestParam String policyVersion,
                          @RequestParam(required = false) Double minAnsweredWeight,
+                         @RequestParam(required = false) Double surveyBadBoundary,
+                         @RequestParam(required = false) Double surveyGoodBoundary,
                          RedirectAttributes redirectAttributes) {
         try {
             double minAnswered = minAnsweredWeight == null
                     ? SkinScorePolicy.DEFAULT_MIN_ANSWERED_WEIGHT : minAnsweredWeight;
-            service.update(featureKey, badBoundary, goodBoundary, policyVersion, minAnswered);
+            service.update(featureKey, badBoundary, goodBoundary, policyVersion, minAnswered,
+                    surveyBadBoundary, surveyGoodBoundary);
             redirectAttributes.addFlashAttribute("successMessage", featureKey + " 정책을 저장했습니다.");
         } catch (IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());

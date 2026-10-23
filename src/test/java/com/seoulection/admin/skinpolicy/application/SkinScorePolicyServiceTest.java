@@ -55,6 +55,26 @@ class SkinScorePolicyServiceTest {
     }
 
     @Test
+    void updateStoresSurveyBoundariesSeparately() {
+        var current = new SkinScorePolicy("acne_score", "Acne", 0.0, 1.0, 0.7, 0.95, 1.0, "v1", 0.5);
+        given(repository.findById("acne_score")).willReturn(Optional.of(SkinScorePolicyJpaEntity.from(current)));
+
+        // 사진 경계는 그대로 두고 설문 경계만 25/75
+        service.update("acne_score", 0.95, 1.0, "v2", 0.5, 0.25, 0.75);
+
+        var captor = ArgumentCaptor.forClass(SkinScorePolicyJpaEntity.class);
+        then(repository).should().save(captor.capture());
+        var saved = captor.getValue().toDomain();
+        assertThat(saved.badBoundary()).isEqualTo(0.95);
+        assertThat(saved.surveyBadBoundary()).isEqualTo(0.25);
+        assertThat(saved.surveyGoodBoundary()).isEqualTo(0.75);
+
+        assertThatThrownBy(() -> service.update("acne_score", 0.95, 1.0, "v2", 0.5, 0.8, 0.3))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("설문 Bad 경계");
+    }
+
+    @Test
     void updateRejectsBoundaryOutsideZeroToOne() {
         var current = new SkinScorePolicy("water_score", "Hydration", 0.8, 0.2, 0.7, 0.398, 0.696, "v1");
         given(repository.findById("water_score")).willReturn(

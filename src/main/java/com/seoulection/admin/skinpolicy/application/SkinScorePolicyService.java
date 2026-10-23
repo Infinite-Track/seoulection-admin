@@ -34,9 +34,24 @@ public class SkinScorePolicyService {
         SkinScorePolicy current = repository.findById(featureKey)
                 .orElseThrow(() -> new IllegalArgumentException("없는 피부 항목입니다: " + featureKey))
                 .toDomain();
+        update(featureKey, badBoundary, goodBoundary, policyVersion, minAnsweredWeight,
+                current.surveyBadBoundary(), current.surveyGoodBoundary());
+    }
+
+    /**
+     * 경계는 원천별로 둘이다(api-server V36): bad/good 은 사진 점수용(분포의 P30/P70), survey* 는 설문 점수용(25/75).
+     * 설문 경계를 비우면(null) 설문 점수도 사진 경계로 판정된다.
+     */
+    @Transactional
+    public void update(String featureKey, double badBoundary, double goodBoundary, String policyVersion,
+                       double minAnsweredWeight, Double surveyBadBoundary, Double surveyGoodBoundary) {
+        SkinScorePolicy current = repository.findById(featureKey)
+                .orElseThrow(() -> new IllegalArgumentException("없는 피부 항목입니다: " + featureKey))
+                .toDomain();
         repository.save(SkinScorePolicyJpaEntity.from(new SkinScorePolicy(featureKey, current.label(),
                 current.surveyReliability(), current.photoReliability(), current.inconsistentSurveyFactor(),
-                badBoundary, goodBoundary, policyVersion.trim(), minAnsweredWeight)));
+                badBoundary, goodBoundary, policyVersion.trim(), minAnsweredWeight,
+                surveyBadBoundary, surveyGoodBoundary)));
     }
 
     /** 최소 답변 비중은 그대로 두는 수정. 옛 호출부 호환. */
