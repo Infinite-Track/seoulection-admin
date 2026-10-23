@@ -36,17 +36,11 @@
                 <div class="table-scroll">
                     <table class="admin-table analyzer-feature-table">
                         <thead>
-                        <tr>
-                            <th>분석기</th>
-                            <th th:each="feature : ${features}">
-                                <span th:text="${feature.label}"></span><br><code th:text="${feature.featureKey}"></code>
-                            </th>
-                            <th></th>
-                        </tr>
+                        <tr><th>분석기 · 사진 점수를 믿는 지표(체크) — 체크하지 않은 지표는 설문으로 묻는다</th></tr>
                         </thead>
                         <tbody>
                         <tr th:each="row : ${analyzers}">
-                            <td colspan="100">
+                            <td>
                                 <form class="analyzer-feature-form" th:action="@{'/admin/skin-analyzer-features/' + ${row.analyzer}}" method="post">
                                     <span class="badge badge-accent" th:text="${row.analyzer}"></span>
                                     <label class="toggle-option" th:each="feature : ${features}">
