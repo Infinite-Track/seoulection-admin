@@ -1,4 +1,7 @@
-FROM eclipse-temurin:17-jdk AS builder
+# 🔴 빌드 단계는 러너 본래 CPU($BUILDPLATFORM, 보통 amd64)에서 돈다. JAR 는 CPU 와 무관한 바이트코드라
+#    여기서 만든 JAR 를 arm64 실행 이미지에도 그대로 넣을 수 있다. 이걸 빼면 arm64 이미지를 만들 때
+#    Gradle 전체가 QEMU 에뮬레이션으로 돌아 몇 배 느려진다(Oracle ARM VM 이전, 2026-11).
+FROM --platform=$BUILDPLATFORM eclipse-temurin:17-jdk AS builder
 
 WORKDIR /workspace
 

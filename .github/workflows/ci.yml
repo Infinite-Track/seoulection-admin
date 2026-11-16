@@ -72,6 +72,11 @@ jobs:
       - name: 체크아웃
         uses: actions/checkout@v7
 
+      # arm64 이미지를 amd64 러너에서 만들기 위한 에뮬레이터. Gradle 빌드는 Dockerfile 이 러너 CPU 로
+      # 돌리므로 에뮬레이션되는 것은 실행 이미지의 가벼운 단계뿐이다.
+      - name: QEMU 설정 (arm64 빌드용)
+        uses: docker/setup-qemu-action@v4
+
       - name: Buildx 설정
         uses: docker/setup-buildx-action@v4
 
@@ -104,8 +109,9 @@ jobs:
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # ⚠️ EC2가 x86_64다. 맥(arm64)에서 만든 이미지는 거기서 exec format error로 안 뜬다.
-          platforms: linux/amd64
+          # 두 CPU 를 한 태그(매니페스트 목록)에 담는다 — 지금 EC2(x86_64)와 이전할 Oracle ARM VM(arm64)이
+          # 같은 sha-<커밋> 태그를 pull 하면 각자 맞는 이미지를 받는다. 이전이 끝나면 amd64 를 뺄 수 있다.
+          platforms: linux/amd64,linux/arm64
           # 레이어 캐시를 Actions 캐시에 export/import한다. 러너는 매번 새로 뜨므로
           # 이게 없으면 Dockerfile의 의존성 레이어가 매 실행 무효가 된다.
           cache-from: type=gha
