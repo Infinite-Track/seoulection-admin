@@ -1,0 +1,86 @@
+name: Deploy (Oracle)
+
+# main 에 머지되면 Oracle ARM VM 에 어드민을 배포한다.
+# VM 의 배포 스크립트와 compose 는 server 저장소(seoulection-server/oracle/)에 있다 — 이 워크플로는 태그만 넘긴다.
+#
+# 왜 Tailscale 인가: SSH 22 번을 인터넷에 열지 않기 위해서다. GitHub 러너가 잠깐 tailnet 에 들어와(tag:ci)
+#   VM(tag:server)에 Tailscale SSH 로 접속한다. SSH 키를 시크릿에 두지 않는다.
+#
+# 🔴 저장소 변수 ORACLE_DEPLOY_ENABLED=true 를 켜기 전에는 아무것도 하지 않는다(VM 준비 전 실패 알림 방지).
+#
+# 필요한 설정(seoulection-server/oracle/README.md "Tailscale" 절):
+#   secrets.TS_OAUTH_CLIENT_ID / secrets.TS_OAUTH_SECRET   auth_keys 쓰기 권한 + tag:ci 를 가진 OAuth 클라이언트
+#   vars.ORACLE_HOST        VM 의 tailnet 이름 (예: seoulection-oracle)
+#   vars.ORACLE_REPO_PATH   VM 의 server 저장소 경로 (기본 /home/ubuntu/seoulection-server)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: '배포할 이미지 태그 (예: sha-1a2b3c4). 비우면 이 커밋으로 계산'
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-oracle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: Oracle VM 배포 (Tailscale)
+    if: vars.ORACLE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: 배포 태그 결정
+        id: tag
+        run: |
+          TAG="${{ inputs.image_tag }}"
+          [ -n "$TAG" ] || TAG="sha-${GITHUB_SHA:0:7}"
+          echo "tag=$TAG"; echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: GHCR 로그인
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ci.yml 의 image job 과 병렬로 돈다. 태그가 아니라 "arm64 이미지가 들어 있는지"까지 본다 —
+      # amd64 만 있는 옛 태그를 VM 이 pull 하면 exec format error 로 뜨지 않는다.
+      - name: arm64 이미지가 GHCR 에 올라올 때까지 대기
+        run: |
+          set -uo pipefail
+          IMAGE="ghcr.io/infinite-track/seoulection-admin:${{ steps.tag.outputs.tag }}"
+          for i in $(seq 1 200); do
+            if docker manifest inspect "$IMAGE" 2>/dev/null | grep -q '"architecture": "arm64"'; then
+              echo "✅ arm64 이미지 확인: $IMAGE (${i}번째 시도)"; exit 0
+            fi
+            echo "대기 중... ($i/200) $IMAGE"; sleep 15
+          done
+          echo "::error::50분 동안 $IMAGE 에 arm64 이미지가 없다. ci.yml image job 을 확인할 것."
+          exit 1
+
+      - name: Tailscale 접속
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ vars.ORACLE_HOST }}
+
+      # VM 의 server 저장소를 최신으로 맞춘 뒤(compose·deploy.sh 변경 반영) 배포 스크립트를 부른다.
+      - name: 배포
+        env:
+          HOST: ${{ vars.ORACLE_HOST }}
+          REPO: ${{ vars.ORACLE_REPO_PATH || '/home/ubuntu/seoulection-server' }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          ssh -o StrictHostKeyChecking=accept-new "ubuntu@${HOST}" \
+            "set -e; cd '${REPO}' && git pull --ff-only -q && ./oracle/deploy.sh admin '${TAG}'"
